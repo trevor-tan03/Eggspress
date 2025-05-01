@@ -1,15 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import Box from "../components/Box";
+import CreateForm from "../components/CreateForm";
 import Modal from "../components/Modal";
+import OpenForm from "../components/OpenForm";
 
 export const Route = createFileRoute("/")({
   component: RouteComponent,
 });
 
 function RouteComponent() {
+  const [menu, setMenu] = useState<"create" | "open" | undefined>(undefined);
   const [showOverlay, setShowOverlay] = useState(false);
-  const handleClose = () => setShowOverlay(false);
+  const handleClose = () => {
+    setShowOverlay(false);
+    setMenu(undefined);
+  };
   const handleOpen = () => setShowOverlay(true);
 
   return (
@@ -19,53 +25,29 @@ function RouteComponent() {
         <p className="text-gray-300 mb-3">
           Temporarily store files for up to 10 minutes
         </p>
-        <a
+        <button
           className="border-2 border-black py-2 px-6 rounded-md w-40 bg-yellow-400 cursor-pointer border-b-4 hover:bg-yellow-200 transition-colors duration-200 text-center"
-          href="/create"
+          onClick={() => {
+            handleOpen();
+            setMenu("create");
+          }}
         >
           Create
-        </a>
+        </button>
 
         <button
           className="border-2 border-black py-2 px-6 rounded-md w-40 bg-yellow-400 cursor-pointer border-b-4 hover:bg-yellow-200 transition-colors duration-200 text-center"
-          onClick={handleOpen}
+          onClick={() => {
+            handleOpen();
+            setMenu("open");
+          }}
         >
           Open
         </button>
       </div>
 
       <Modal open={showOverlay} onClose={handleClose}>
-        <Box>
-          <form>
-            <h1 className="text-center text-3xl font-bold">
-              Enter Box Details
-            </h1>
-            <div className="grid">
-              <label htmlFor="code">Code</label>
-              <input
-                id="code"
-                className="border-2 border-black rounded-md p-2"
-                type="text"
-              />
-            </div>
-
-            <div className="grid">
-              <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                className="border-2 border-black rounded-md p-2 tracking-widest"
-                type="password"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="p-2 border-2 border-b-4 border-black rounded-md mt-3 w-full bg-yellow-400 hover:bg-yellow-200 transition-colors duration-200 cursor-pointer"
-            >
-              Submit
-            </button>
-          </form>
-        </Box>
+        <Box>{menu === "create" ? <CreateForm /> : <OpenForm />}</Box>
       </Modal>
     </div>
   );
