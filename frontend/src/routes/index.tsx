@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import "react-tooltip/dist/react-tooltip.css";
 import Box from "../components/Box";
 import CreateForm from "../components/CreateForm";
 import Modal from "../components/Modal";
