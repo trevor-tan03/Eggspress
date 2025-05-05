@@ -7,7 +7,7 @@ export default function BoxNotExist() {
           The box you're looking for does not exist.
         </p>
         <a
-          className="p-2 border-2 border-b-4 border-black rounded-md mt-3 w-full bg-yellow-400 hover:bg-yellow-200 transition-colors duration-200 cursor-pointer text-center"
+          className="p-2 border-2 border-b-4 border-black rounded-md mt-3 w-full max-w-lg bg-yellow-400 hover:bg-yellow-200 transition-colors duration-200 cursor-pointer text-center"
           href="/"
         >
           Return To Menu

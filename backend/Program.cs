@@ -1,3 +1,5 @@
+using Microsoft.Extensions.FileProviders;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -26,10 +28,18 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(
+        Path.Combine(builder.Environment.ContentRootPath, "Boxes")),
+        RequestPath = "/files"
+    });
 }
 
 app.UseCors(allowSpecificOrigins);
 app.UseHttpsRedirection();
+
 app.MapControllers();
 
 app.Run();

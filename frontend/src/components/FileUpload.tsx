@@ -1,0 +1,93 @@
+import { useCallback } from "react";
+import { useDropzone } from "react-dropzone";
+
+interface Props {
+  code: string;
+  uploadedFiles: IFile[];
+  setUploadedFiles: React.Dispatch<React.SetStateAction<IFile[]>>;
+}
+
+export interface IFile {
+  name: string;
+  size: number;
+}
+
+export default function FileUpload({
+  code,
+  uploadedFiles,
+  setUploadedFiles,
+}: Props) {
+  async function handleUpload(code: string, files: File[]) {
+    try {
+      const formData = new FormData();
+
+      for (const file of files) formData.append("files", file); // "files" is the field name expected by your backend
+
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_API}/api/box/${code}/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error("An error occurred while uploading files.");
+      }
+
+      return true;
+    } catch (err) {
+      console.error((err as Error).message);
+      return false;
+    }
+  }
+
+  function ToFileDTO(files: File[]) {
+    return files.map((f) => {
+      const file: IFile = {
+        name: f.name,
+        size: f.size,
+      };
+      return file;
+    });
+  }
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    const dto = ToFileDTO(acceptedFiles);
+    setUploadedFiles((i) => i.concat(dto));
+    await handleUpload(code, acceptedFiles);
+  }, []);
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
+
+  return (
+    <div
+      {...getRootProps()}
+      className="p-3 rounded-md border-2 border-blue-400 max-w-lg mx-auto mt-6 bg-blue-100 flex flex-col items-center"
+    >
+      <button className="bg-blue-500 rounded-full w-10 h-10 text-white text-2xl cursor-pointer hover:bg-blue-600">
+        <div className="pt-0.5 m-0 h-full w-full">+</div>
+      </button>
+      <p className="text-center mt-3 text-sm text-gray-700">
+        Drag and Drop file(s) here
+      </p>
+      {/* <p className="underline text-sm text-blue-500">Or upload folder here</p> */}
+      <input {...getInputProps()} />
+      {uploadedFiles.length > 0 && (
+        <div
+          className="border p-3 border-blue-400 transition-colors duration-200 rounded-md w-full mt-3 "
+          style={{
+            backgroundColor: isDragActive ? "blue" : "white",
+          }}
+        >
+          <ul>
+            {uploadedFiles.map((item, i) => (
+              <li key={i}>
+                {item.name} - {item.size}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}

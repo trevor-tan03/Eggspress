@@ -18,6 +18,7 @@ function RouteComponent() {
     setMenu(undefined);
   };
   const handleOpen = () => setShowOverlay(true);
+  console.log(import.meta.env.VITE_BACKEND_API);
 
   return (
     <div className="pt-20 relative h-dvh">

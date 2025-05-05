@@ -1,7 +1,8 @@
 export default function CreateForm() {
   async function handleSubmit(formData: FormData) {
     try {
-      const createEndpoint = "http://localhost:5120/api/box/create";
+      const createEndpoint = `${import.meta.env.VITE_BACKEND_API}/api/box/create`;
+      console.log(import.meta.env.BACKEND_API);
 
       const res = await fetch(createEndpoint, {
         method: "POST",
@@ -25,11 +26,14 @@ export default function CreateForm() {
       <h1 className="text-center text-3xl font-bold">Create Box</h1>
 
       <div className="grid mt-3">
-        <label htmlFor="password">Password</label>
+        <label htmlFor="password" className="text-gray-800">
+          Password
+        </label>
         <input
+          disabled // Disabled for now
           id="password"
           name="password"
-          className="border-2 border-black rounded-md p-2 tracking-widest"
+          className="border-2 border-black rounded-md p-2 tracking-widest disabled:bg-gray-200 disabled:cursor-not-allowed"
           maxLength={20}
           type="password"
         />

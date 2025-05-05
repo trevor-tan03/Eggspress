@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Tooltip } from "react-tooltip";
-import FileExplorer from "../../components/FileExplorer";
-import Notepad from "../../components/Notepad";
+import type { IFile } from "../../components/FileUpload";
+import FileUpload from "../../components/FileUpload";
 import BoxHeader from "../../components/Views/BoxHeader";
 import BoxNotExist from "../../components/Views/BoxNotExist";
 
@@ -10,35 +10,27 @@ export const Route = createFileRoute("/box/$code")({
   component: RouteComponent,
 });
 
-function getView() {
-  const hash = window.location.hash.substring(1);
-  return hash;
-}
-
 function RouteComponent() {
-  const [selected, setSelected] = useState<"explorer" | "notepad">(
-    getView() === "notepad" ? "notepad" : "explorer"
-  );
   const [exists, setExists] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<IFile[]>([]);
   const { code } = Route.useParams();
 
-  useEffect(() => {
-    function handleHashChange() {
-      setSelected(getView() === "notepad" ? "notepad" : "explorer");
-    }
-
-    window.addEventListener("hashchange", handleHashChange);
-    handleHashChange();
-
-    return () => {
-      window.removeEventListener("hashchange", handleHashChange);
-    };
-  }, []);
-
   async function checkBoxExists(code: string) {
-    const res = await fetch(`http://localhost:5120/api/box/${code}`);
-    const boxExists = await res.text();
-    setExists(boxExists === "true");
+    const res = await fetch(
+      `${import.meta.env.VITE_BACKEND_API}/api/box/${code}`
+    );
+
+    setExists(res.ok);
+
+    if (res.ok) getBoxFiles();
+  }
+
+  async function getBoxFiles() {
+    const res = await fetch(
+      `${import.meta.env.VITE_BACKEND_API}/api/box/${code}/files`
+    );
+
+    setUploadedFiles(await res.json());
   }
 
   useEffect(() => {
@@ -50,10 +42,12 @@ function RouteComponent() {
   return (
     <div>
       <Tooltip id="my-tooltip" />
-      <BoxHeader code={code} selected={selected} setSelected={setSelected} />
-      <div className="p-3">
-        {selected === "notepad" ? <Notepad /> : <FileExplorer />}
-      </div>
+      <BoxHeader code={code} />
+      <FileUpload
+        code={code}
+        uploadedFiles={uploadedFiles}
+        setUploadedFiles={setUploadedFiles}
+      />
     </div>
   );
 }
