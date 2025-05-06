@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using backend.util;
-using System.IO;
+using backend.Repositories;
 
 namespace backend.Controllers;
 
@@ -10,7 +9,11 @@ public record CreateBoxDTO(string? password = null);
 [ApiController]
 public class BoxController : ControllerBase
 {
-    public BoxController() { }
+    private readonly IBoxRepository _boxRepository;
+    public BoxController(IBoxRepository boxRepository)
+    {
+        _boxRepository = boxRepository;
+    }
 
     [HttpGet("{code}")]
     public IActionResult BoxExists(string code)
@@ -27,24 +30,14 @@ public class BoxController : ControllerBase
         if (!Directory.Exists(Path.Combine("Boxes", code)))
             return NotFound("Box does not exist.");
 
-        var boxPath = Path.Combine("Boxes", code);
-        var dirInfo = new DirectoryInfo(boxPath);
-        var files = dirInfo.GetFiles();
-        var filesDTO = ConvertToDTO.GetFilesList(files);
-
-        return Ok(filesDTO);
+        var files = _boxRepository.GetFiles(code);
+        return Ok(files);
     }
 
     [HttpPost("create")]
     public IActionResult CreateBox([FromBody] CreateBoxDTO data)
     {
-        string code = Code.GenerateBoxCode(12);
-
-        while (Directory.Exists(Path.Combine("Boxes", code)))
-            code = Code.GenerateBoxCode(12);
-
-        Directory.CreateDirectory(Path.Combine("Boxes", code));
-        // Register in database
+        var code = _boxRepository.CreateBox();
         return Ok(code);
     }
 
@@ -58,14 +51,9 @@ public class BoxController : ControllerBase
         else if (files.Count == 0)
             return BadRequest("No file uploaded.");
 
-        foreach (var file in files)
-        {
-            var filePath = Path.Combine(boxPath, file.FileName);
-            await using var stream = new FileStream(filePath, FileMode.Create);
-            await file.CopyToAsync(stream);
-        }
+        var uploadedFiles = await _boxRepository.UploadFiles(code, files);
 
-        return Ok(new { files });
+        return Ok(new { uploadedFiles });
     }
 
     [HttpDelete("{code}/delete")]
@@ -75,7 +63,10 @@ public class BoxController : ControllerBase
         if (!Directory.Exists(boxPath))
             return NotFound("Box not found.");
 
-        Directory.Delete(boxPath, recursive: true);
-        return Ok(!Directory.Exists(boxPath));
+        var boxRemoved = _boxRepository.DeleteBox(code);
+        if (!boxRemoved)
+            return StatusCode(500, "An error occurred while deleting box.");
+
+        return Ok($"Successfully deleted box '{code}'");
     }
 }
