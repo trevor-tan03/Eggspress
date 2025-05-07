@@ -1,6 +1,7 @@
 using backend.Repositories;
 using Microsoft.Extensions.FileProviders;
-using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
+using backend.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +13,7 @@ builder.Logging.AddConsole();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddSingleton<IBoxRepository, LocalBoxRepository>();
+builder.Services.AddScoped<IBoxRepository, LocalBoxRepository>();
 builder.Services.AddControllers();
 
 string allowSpecificOrigins = "BINGO LINGO";
@@ -26,6 +27,15 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod()
             .AllowCredentials();
     });
+});
+
+builder.Services.AddDbContext<BoxDbContext>(opt =>
+{
+    if (builder.Environment.IsDevelopment())
+        opt.UseSqlite("Data Source=boxes.db");
+
+    else
+        opt.UseNpgsql(builder.Configuration.GetConnectionString("Supabase_DB"));
 });
 
 var app = builder.Build();

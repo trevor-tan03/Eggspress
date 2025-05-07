@@ -1,4 +1,7 @@
+using backend.Data;
+using backend.Models;
 using backend.util;
+using Microsoft.EntityFrameworkCore;
 
 namespace backend.Repositories;
 
@@ -6,24 +9,33 @@ public class LocalBoxRepository : IBoxRepository
 {
     private readonly ILogger<LocalBoxRepository> _logger;
     private readonly string _basePath = Path.Combine(Directory.GetCurrentDirectory(), "Boxes");
+    private readonly BoxDbContext _context;
+
     private string GetBoxPath(string code)
     {
         return Path.Combine(_basePath, code);
     }
 
-    public LocalBoxRepository(ILogger<LocalBoxRepository> logger)
+    public LocalBoxRepository(ILogger<LocalBoxRepository> logger, BoxDbContext context)
     {
         _logger = logger;
+        _context = context;
     }
 
-    public bool BoxExists(string code)
+    public async Task<bool> BoxExists(string code)
     {
+        var box = await _context.Boxes.FirstOrDefaultAsync(x => x.Code == code);
+
+        if (box == null || DateTime.UtcNow > box.ExpiresAt)
+            return false;
+
         return Directory.Exists(Path.Combine(_basePath, code));
     }
 
-    public List<FileDTO>? GetFiles(string code)
+    public async Task<List<FileDTO>?> GetFiles(string code)
     {
-        if (!Directory.Exists(Path.Combine(_basePath, code)))
+        var boxExists = await BoxExists(code);
+        if (!boxExists)
         {
             _logger.LogError($"Box '{code}' not found when trying to retrieve files");
             return null;
@@ -44,14 +56,18 @@ public class LocalBoxRepository : IBoxRepository
         }
     }
 
-    public string CreateBox()
+    public async Task<string> CreateBox()
     {
         string code = Code.GenerateBoxCode(12);
 
         while (Directory.Exists(Path.Combine(_basePath, code)))
             code = Code.GenerateBoxCode(12);
 
-        // var expiryDate = DateTime.Now.AddMinutes(10);
+
+        var box = new Box(code);
+
+        await _context.Boxes.AddAsync(box);
+        await _context.SaveChangesAsync();
         Directory.CreateDirectory(Path.Combine(_basePath, code));
         return code;
     }
@@ -61,6 +77,11 @@ public class LocalBoxRepository : IBoxRepository
         try
         {
             var boxPath = GetBoxPath(code);
+            if (!Directory.Exists(boxPath))
+            {
+                _logger.LogWarning("Tried to upload files to non-existent box: {Code}", code);
+                return null;
+            }
 
             foreach (var file in files)
             {
@@ -69,7 +90,7 @@ public class LocalBoxRepository : IBoxRepository
                 await file.CopyToAsync(stream);
             }
 
-            return GetFiles(code); // Returns updated files list
+            return await GetFiles(code); // Returns updated files list
         }
         catch (Exception err)
         {
@@ -77,10 +98,16 @@ public class LocalBoxRepository : IBoxRepository
             return null;
         }
     }
-    public bool DeleteBox(string code)
+    public async Task<bool> DeleteBox(string code)
     {
         try
         {
+            var box = await _context.Boxes.FirstOrDefaultAsync(x => x.Code == code);
+            if (box == null) return false;
+
+            _context.Boxes.Remove(box);
+            await _context.SaveChangesAsync();
+
             var boxPath = GetBoxPath(code);
             Directory.Delete(boxPath, recursive: true);
             return !Directory.Exists(boxPath);

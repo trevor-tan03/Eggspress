@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using backend.Repositories;
+using System.Threading.Tasks;
 
 namespace backend.Controllers;
 
@@ -16,37 +17,37 @@ public class BoxController : ControllerBase
     }
 
     [HttpGet("{code}")]
-    public IActionResult BoxExists(string code)
+    public async Task<IActionResult> BoxExists(string code)
     {
-        if (!Directory.Exists(Path.Combine("Boxes", code)))
+        if (!await _boxRepository.BoxExists(code))
             return NotFound("Box does not exist.");
 
-        return Ok();
+        return Ok($"Box with code '{code}' found.");
     }
 
     [HttpGet("{code}/files")]
-    public IActionResult GetFiles(string code)
+    public async Task<IActionResult> GetFiles(string code)
     {
-        if (!Directory.Exists(Path.Combine("Boxes", code)))
+        if (!await _boxRepository.BoxExists(code))
             return NotFound("Box does not exist.");
 
-        var files = _boxRepository.GetFiles(code);
+        var files = await _boxRepository.GetFiles(code);
         return Ok(files);
     }
 
     [HttpPost("create")]
-    public IActionResult CreateBox([FromBody] CreateBoxDTO data)
+    public async Task<IActionResult> CreateBox([FromBody] CreateBoxDTO data)
     {
-        var code = _boxRepository.CreateBox();
+        var code = await _boxRepository.CreateBox();
         return Ok(code);
     }
 
     [HttpPost("{code}/upload")]
     public async Task<IActionResult> UploadFile(string code, List<IFormFile> files)
     {
-        var boxPath = Path.Combine("Boxes", code);
+        var boxExists = await _boxRepository.BoxExists(code);
 
-        if (!Directory.Exists(boxPath))
+        if (!boxExists)
             return NotFound("Box not found.");
         else if (files.Count == 0)
             return BadRequest("No file uploaded.");
@@ -57,13 +58,13 @@ public class BoxController : ControllerBase
     }
 
     [HttpDelete("{code}/delete")]
-    public IActionResult DestroyBox(string code)
+    public async Task<IActionResult> DestroyBox(string code)
     {
-        var boxPath = Path.Combine("Boxes", code);
-        if (!Directory.Exists(boxPath))
+        var boxExists = await _boxRepository.BoxExists(code);
+        if (!boxExists)
             return NotFound("Box not found.");
 
-        var boxRemoved = _boxRepository.DeleteBox(code);
+        var boxRemoved = await _boxRepository.DeleteBox(code);
         if (!boxRemoved)
             return StatusCode(500, "An error occurred while deleting box.");
 
