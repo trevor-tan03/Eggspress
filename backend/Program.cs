@@ -46,10 +46,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 
+    var boxDir = Path.Combine(builder.Environment.ContentRootPath, "Boxes");
+    if (!Directory.Exists(boxDir))
+        Directory.CreateDirectory(boxDir);
+
     app.UseStaticFiles(new StaticFileOptions
     {
-        FileProvider = new PhysicalFileProvider(
-        Path.Combine(builder.Environment.ContentRootPath, "Boxes")),
+        FileProvider = new PhysicalFileProvider(boxDir),
         RequestPath = "/files"
     });
 }
