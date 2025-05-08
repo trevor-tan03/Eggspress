@@ -11,68 +11,48 @@ public class LocalBoxRepository : IBoxRepository
     private readonly string _basePath = Path.Combine(Directory.GetCurrentDirectory(), "Boxes");
     private readonly BoxDbContext _context;
 
-    private string GetBoxPath(string code)
-    {
-        return Path.Combine(_basePath, code);
-    }
-
     public LocalBoxRepository(ILogger<LocalBoxRepository> logger, BoxDbContext context)
     {
         _logger = logger;
         _context = context;
     }
 
-    public async Task<bool> BoxExists(string code)
+    public async Task<BoxDTO?> GetBox(string code)
     {
-        var box = await _context.Boxes.FirstOrDefaultAsync(x => x.Code == code);
+        var box = await _context.Boxes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Code == code);
 
-        if (box == null || DateTime.UtcNow > box.ExpiresAt)
-            return false;
+        if (box == null || DateTime.UtcNow > box.ExpiresAt || !Directory.Exists(GetBoxPath(code)))
+            return null;
 
-        return Directory.Exists(Path.Combine(_basePath, code));
+        var files = GetFiles(code);
+        return ConvertToDTO.Box(box, files ?? []);
     }
 
-    public async Task<List<FileDTO>?> GetFiles(string code)
+    public async Task<(BoxOperationResult, string? Code)> CreateBox()
     {
-        var boxExists = await BoxExists(code);
-        if (!boxExists)
-        {
-            _logger.LogError($"Box '{code}' not found when trying to retrieve files");
-            return null;
-        }
-
         try
         {
-            var boxPath = Path.Combine(_basePath, code);
-            var dirInfo = new DirectoryInfo(boxPath);
-            var files = dirInfo.GetFiles();
-            var filesDTO = ConvertToDTO.GetFilesList(files);
-            return filesDTO;
+            string code = Code.GenerateBoxCode(12);
+            while (Directory.Exists(GetBoxPath(code)))
+                code = Code.GenerateBoxCode(12);
+
+            var box = new Box(code);
+            await _context.Boxes.AddAsync(box);
+            await _context.SaveChangesAsync();
+
+            Directory.CreateDirectory(GetBoxPath(code));
+            return (BoxOperationResult.Success, code);
         }
-        catch (Exception ex)
+        catch (Exception err)
         {
-            _logger.LogError(ex, $"Failed to get files for box {code}");
-            return null;
+            _logger.LogError(err, "Error occurred while creating box.");
+            return (BoxOperationResult.Error, null);
         }
     }
 
-    public async Task<string> CreateBox()
-    {
-        string code = Code.GenerateBoxCode(12);
-
-        while (Directory.Exists(Path.Combine(_basePath, code)))
-            code = Code.GenerateBoxCode(12);
-
-
-        var box = new Box(code);
-
-        await _context.Boxes.AddAsync(box);
-        await _context.SaveChangesAsync();
-        Directory.CreateDirectory(Path.Combine(_basePath, code));
-        return code;
-    }
-
-    public async Task<List<FileDTO>?> UploadFiles(string code, List<IFormFile> files)
+    public async Task<(BoxOperationResult, List<FileDTO>?)> UploadFiles(string code, List<IFormFile> files)
     {
         try
         {
@@ -80,7 +60,7 @@ public class LocalBoxRepository : IBoxRepository
             if (!Directory.Exists(boxPath))
             {
                 _logger.LogWarning("Tried to upload files to non-existent box: {Code}", code);
-                return null;
+                return (BoxOperationResult.NotFound, null);
             }
 
             foreach (var file in files)
@@ -90,32 +70,55 @@ public class LocalBoxRepository : IBoxRepository
                 await file.CopyToAsync(stream);
             }
 
-            return await GetFiles(code); // Returns updated files list
+            return (BoxOperationResult.Success, GetFiles(code)); // Returns updated files list
         }
         catch (Exception err)
         {
             _logger.LogError(err, "Error occurred while uploading files.");
-            return null;
+            return (BoxOperationResult.Error, null);
         }
     }
-    public async Task<bool> DeleteBox(string code)
+
+    public async Task<BoxOperationResult> DeleteBox(string code)
     {
         try
         {
             var box = await _context.Boxes.FirstOrDefaultAsync(x => x.Code == code);
-            if (box == null) return false;
 
-            _context.Boxes.Remove(box);
+            if (box == null) return BoxOperationResult.NotFound;
+
+            // Marks as expired. Expired boxes will be removed periodically.
+            box.ExpiresAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            var boxPath = GetBoxPath(code);
-            Directory.Delete(boxPath, recursive: true);
-            return !Directory.Exists(boxPath);
+            return BoxOperationResult.Success;
         }
         catch (Exception err)
         {
             _logger.LogError(err, "Error occurred while removing box.");
-            return false;
+            return BoxOperationResult.Error;
+        }
+    }
+
+    private string GetBoxPath(string code)
+    {
+        return Path.Combine(_basePath, code);
+    }
+
+    private List<FileDTO>? GetFiles(string code)
+    {
+        try
+        {
+            var boxPath = Path.Combine(_basePath, code);
+            var dirInfo = new DirectoryInfo(boxPath);
+            var files = dirInfo.GetFiles();
+            var filesDTO = ConvertToDTO.Files(files);
+            return filesDTO;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Failed to get files for box {code}");
+            return null;
         }
     }
 }

@@ -1,4 +1,4 @@
 bin/
 obj/
 Boxes/
-boxes.db
+boxes.*
