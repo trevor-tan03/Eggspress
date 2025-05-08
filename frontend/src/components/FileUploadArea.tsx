@@ -1,22 +1,15 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
+import { IFile } from "../types/BoxTypes";
 
 interface Props {
   code: string;
-  uploadedFiles: IFile[];
-  setUploadedFiles: React.Dispatch<React.SetStateAction<IFile[]>>;
+  originalFiles: IFile[];
 }
 
-export interface IFile {
-  name: string;
-  size: number;
-}
+export default function FileUpload({ code, originalFiles }: Props) {
+  const [uploadedFiles, setUploadedFiles] = useState(originalFiles);
 
-export default function FileUpload({
-  code,
-  uploadedFiles,
-  setUploadedFiles,
-}: Props) {
   async function handleUpload(code: string, files: File[]) {
     try {
       const formData = new FormData();
@@ -52,11 +45,19 @@ export default function FileUpload({
     });
   }
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    const dto = ToFileDTO(acceptedFiles);
-    setUploadedFiles((i) => i.concat(dto));
-    await handleUpload(code, acceptedFiles);
-  }, []);
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      const uploadSuccess = await handleUpload(code, acceptedFiles);
+
+      if (uploadSuccess) {
+        const dto = ToFileDTO(acceptedFiles);
+        setUploadedFiles((i) => i.concat(dto));
+      } else {
+        console.error(`Failed to upload files: ${uploadSuccess}`);
+      }
+    },
+    [code]
+  );
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
   return (
@@ -70,7 +71,6 @@ export default function FileUpload({
       <p className="text-center mt-3 text-sm text-gray-700">
         Drag and Drop file(s) here
       </p>
-      {/* <p className="underline text-sm text-blue-500">Or upload folder here</p> */}
       <input {...getInputProps()} />
       {uploadedFiles.length > 0 && (
         <div

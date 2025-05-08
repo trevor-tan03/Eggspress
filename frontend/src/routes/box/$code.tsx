@@ -1,53 +1,48 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Tooltip } from "react-tooltip";
-import type { IFile } from "../../components/FileUpload";
-import FileUpload from "../../components/FileUpload";
+import FileUploadArea from "../../components/FileUploadArea";
 import BoxHeader from "../../components/Views/BoxHeader";
 import BoxNotExist from "../../components/Views/BoxNotExist";
+import { BoxDTO } from "../../types/BoxTypes";
 
 export const Route = createFileRoute("/box/$code")({
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const [exists, setExists] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<IFile[]>([]);
+  const [boxDetails, setBoxDetails] = useState<BoxDTO | null>(null);
   const { code } = Route.useParams();
 
-  async function checkBoxExists(code: string) {
-    const res = await fetch(
-      `${import.meta.env.VITE_BACKEND_API}/api/box/${code}`
-    );
+  async function getBoxDetails(code: string) {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_API}/api/box/${code}`
+      );
 
-    setExists(res.ok);
+      if (!res.ok) throw new Error(`${await res.text()}`);
 
-    if (res.ok) getBoxFiles();
-  }
-
-  async function getBoxFiles() {
-    const res = await fetch(
-      `${import.meta.env.VITE_BACKEND_API}/api/box/${code}/files`
-    );
-
-    setUploadedFiles(await res.json());
+      const data = (await res.json()) as BoxDTO;
+      setBoxDetails(data);
+    } catch (err) {
+      console.error(
+        "An error occurred while fetching box details: " +
+          (err as Error).message
+      );
+    }
   }
 
   useEffect(() => {
-    checkBoxExists(code);
+    getBoxDetails(code);
   }, [code]);
 
-  if (!exists) return <BoxNotExist />;
+  if (!boxDetails) return <BoxNotExist />;
 
   return (
     <div>
       <Tooltip id="my-tooltip" />
-      <BoxHeader code={code} />
-      <FileUpload
-        code={code}
-        uploadedFiles={uploadedFiles}
-        setUploadedFiles={setUploadedFiles}
-      />
+      <BoxHeader code={code} expiresAt={boxDetails.expiresAt} />
+      <FileUploadArea code={code} originalFiles={boxDetails.files} />
     </div>
   );
 }
