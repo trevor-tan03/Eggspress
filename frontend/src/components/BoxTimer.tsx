@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 
 interface Props {
   expiresAt: string;
+  setExpired: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export default function BoxTimer({ expiresAt }: Props) {
+export default function BoxTimer({ expiresAt, setExpired }: Props) {
   const [timeRemaining, setTimeRemaining] = useState(0);
 
   function formatTime(ms: number): string {
@@ -26,13 +27,16 @@ export default function BoxTimer({ expiresAt }: Props) {
     const countdownInterval = setInterval(() => {
       const remainingTime = calculateTimeRemaining();
 
-      if (remainingTime <= 0) clearInterval(countdownInterval);
+      if (remainingTime <= 0) {
+        setExpired(true);
+        clearInterval(countdownInterval);
+      }
 
       setTimeRemaining(remainingTime);
     }, 1000);
 
     return () => clearInterval(countdownInterval);
-  }, [expiresAt]);
+  }, [expiresAt, setExpired]);
 
   return (
     <div className="p-3 border-2 border-yellow-400 rounded-md w-60 text-center text-yellow-400 font-bold border-r-0 rounded-r-none">
