@@ -31,12 +31,7 @@ export default function BoxHeader({ code, expiresAt, setExpired }: Props) {
           data-tooltip-content="Detonate Box"
           onClick={() => DeleteBox(code)}
         >
-          <img
-            src="../../../public/explosive-dark.png"
-            alt="explode"
-            width="20"
-            height="20"
-          />
+          <img src="/explosive-dark.png" alt="explode" width="20" height="20" />
         </button>
       </div>
     </div>

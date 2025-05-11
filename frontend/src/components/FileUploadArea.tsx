@@ -99,7 +99,7 @@ export default function FileUpload({ code, originalFiles }: Props) {
             </ul>
           </div>
           <a
-            className="mt-3 p-1 px-4 rounded-md border-blue-500 border text-blue-500 hover:bg-blue-500 hover:text-white transition-colors duration-200 cursor-pointer"
+            className="mt-6 p-1 px-4 rounded-md border-blue-500 border text-blue-500 hover:bg-blue-500 hover:text-white transition-colors duration-200 cursor-pointer"
             href={`${import.meta.env.VITE_BACKEND_API}/api/download/all/${code}/`}
           >
             Download All

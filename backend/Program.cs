@@ -2,6 +2,7 @@ using backend.Repositories;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.EntityFrameworkCore;
 using backend.Data;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +38,16 @@ builder.Services.AddDbContext<BoxDbContext>(opt =>
     else
         opt.UseNpgsql(builder.Configuration.GetConnectionString("Supabase_DB"));
 });
+
+builder.Services.Configure<IISServerOptions>(options =>
+{
+    options.MaxRequestBodySize = 1L * 1024 * 1024 * 1024; // for IIS
+});
+builder.Services.Configure<KestrelServerOptions>(options =>
+{
+    options.Limits.MaxRequestBodySize = 1L * 1024 * 1024 * 1024; // for Kestrel
+});
+
 
 var app = builder.Build();
 
