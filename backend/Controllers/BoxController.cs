@@ -1,18 +1,21 @@
 using Microsoft.AspNetCore.Mvc;
 using backend.Repositories;
+using Microsoft.AspNetCore.Identity;
+using backend.Models;
 
 namespace backend.Controllers;
 
-public record CreateBoxDTO(string? password = null);
 
 [Route("api/box")]
 [ApiController]
 public class BoxController : ControllerBase
 {
+    private readonly ILogger<BoxController> _logger;
     private readonly IBoxRepository _boxRepository;
 
-    public BoxController(IBoxRepository boxRepository)
+    public BoxController(ILogger<BoxController> logger, IBoxRepository boxRepository)
     {
+        _logger = logger;
         _boxRepository = boxRepository;
     }
 
@@ -27,16 +30,25 @@ public class BoxController : ControllerBase
     }
 
     [HttpPost("create")]
-    public async Task<IActionResult> CreateBox([FromBody] CreateBoxDTO data)
+    [RequestSizeLimit(1_000_000_000)]
+    public async Task<IActionResult> CreateBox([FromForm] string? password, [FromForm] List<IFormFile> files)
     {
-        var (result, code) = await _boxRepository.CreateBox();
-        switch (result)
+        var (createResult, box) = await _boxRepository.CreateBox(password);
+
+        if (createResult == BoxOperationResult.Error || box == null)
+            return StatusCode(500, "An error occurred while creating box.");
+
+        if (files.Count == 0)
+            return BadRequest("No files have been provided to upload.");
+
+        var (uploadResult, uploadedFiles) = await _boxRepository.UploadFiles(box.Code, files);
+
+        return uploadResult switch
         {
-            case BoxOperationResult.Success:
-                return Ok(code);
-            default:
-                return StatusCode(500, "An error occurred while creating box.");
-        }
+            BoxOperationResult.Success => Ok(new { box.Code, uploadedFiles }),
+            BoxOperationResult.NotFound => NotFound("Box does not exist."),
+            _ => StatusCode(500, "Error uploading files.")
+        };
     }
 
     [HttpPost("{code}/upload")]

@@ -1,6 +1,7 @@
 using backend.Data;
 using backend.Models;
 using backend.util;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace backend.Repositories;
@@ -30,7 +31,7 @@ public class LocalBoxRepository : IBoxRepository
         return ConvertToDTO.Box(box, files ?? []);
     }
 
-    public async Task<(BoxOperationResult, string? Code)> CreateBox()
+    public async Task<(BoxOperationResult, Box? createdBox)> CreateBox(string? password = null)
     {
         try
         {
@@ -39,11 +40,19 @@ public class LocalBoxRepository : IBoxRepository
                 code = Code.GenerateBoxCode(12);
 
             var box = new Box(code);
+
+            if (!string.IsNullOrWhiteSpace(password))
+            {
+                var hasher = new PasswordHasher<Box>();
+                box.Password = hasher.HashPassword(box, password);
+                _logger.LogInformation(hasher.VerifyHashedPassword(box, box.Password, password).ToString());
+            }
+
             await _context.Boxes.AddAsync(box);
             await _context.SaveChangesAsync();
 
             Directory.CreateDirectory(GetBoxPath(code));
-            return (BoxOperationResult.Success, code);
+            return (BoxOperationResult.Success, box);
         }
         catch (Exception err)
         {
