@@ -72,12 +72,13 @@ public class LocalBoxRepository : IBoxRepository
                 return (BoxOperationResult.NotFound, null);
             }
 
-            foreach (var file in files)
+            var tasks = files.Select(async file =>
             {
                 var filePath = Path.Combine(boxPath, file.FileName);
                 await using var stream = new FileStream(filePath, FileMode.Create);
                 await file.CopyToAsync(stream);
-            }
+            });
+            await Task.WhenAll(tasks);
 
             return (BoxOperationResult.Success, GetFiles(code)); // Returns updated files list
         }

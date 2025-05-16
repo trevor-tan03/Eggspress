@@ -3,6 +3,9 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.EntityFrameworkCore;
 using backend.Data;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Http.Features;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,13 +42,54 @@ builder.Services.AddDbContext<BoxDbContext>(opt =>
         opt.UseNpgsql(builder.Configuration.GetConnectionString("Supabase_DB"));
 });
 
-builder.Services.Configure<IISServerOptions>(options =>
+long maxRequestBodySize = 5L * 1024 * 1024 * 1024; // 5 GB
+
+builder.Services.Configure<FormOptions>(options =>
 {
-    options.MaxRequestBodySize = 1L * 1024 * 1024 * 1024; // for IIS
+    options.MultipartBodyLengthLimit = maxRequestBodySize;
 });
 builder.Services.Configure<KestrelServerOptions>(options =>
 {
-    options.Limits.MaxRequestBodySize = 1L * 1024 * 1024 * 1024; // for Kestrel
+    options.Limits.MaxRequestBodySize = maxRequestBodySize; // for Kestrel
+});
+builder.Services.Configure<IISServerOptions>(options =>
+{
+    options.MaxRequestBodySize = maxRequestBodySize; // for IIS
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("strict", context =>
+    {
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: ip,
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromHours(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 2
+            }
+        );
+    });
+
+    options.AddPolicy("lenient", context =>
+{
+    var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+    return RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: ip,
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 50,
+            Window = TimeSpan.FromHours(1),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 2
+        }
+    );
+});
 });
 
 
@@ -70,6 +114,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors(allowSpecificOrigins);
 app.UseHttpsRedirection();
+app.UseRateLimiter();
 
 app.MapControllers();
 
