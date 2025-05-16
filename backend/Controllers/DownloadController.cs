@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using backend.Repositories;
 using System.IO.Compression;
+using Microsoft.AspNetCore.RateLimiting;
 namespace backend.Controllers;
 
 [Route("api/download")]
@@ -16,6 +17,7 @@ public class DownloadController : ControllerBase
 
 
     [HttpGet("{code}/{fileName}")]
+    [EnableRateLimiting("strict")]
     public async Task<IActionResult> DownloadFile(string code, string fileName)
     {
         var box = await _boxRepository.GetBox(code);
@@ -33,6 +35,7 @@ public class DownloadController : ControllerBase
     }
 
     [HttpGet("all/{code}")]
+    [EnableRateLimiting("strict")]
     public async Task<IActionResult> DownloadAllFiles(string code)
     {
         var box = await _boxRepository.GetBox(code);

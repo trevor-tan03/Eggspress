@@ -3,8 +3,15 @@ using backend.Repositories;
 using Microsoft.AspNetCore.Identity;
 using backend.Models;
 using Microsoft.AspNetCore.RateLimiting;
+using backend.util;
+using backend.Filters;
 
 namespace backend.Controllers;
+
+public class BoxAuthDTO
+{
+    public string Password { get; set; } = default!;
+}
 
 
 [Route("api/box")]
@@ -21,21 +28,57 @@ public class BoxController : ControllerBase
     }
 
     [HttpGet("{code}")]
+    [BoxAuth("code")]
     [EnableRateLimiting("lenient")]
     public async Task<IActionResult> GetBoxDetails(string code)
     {
         var box = await _boxRepository.GetBox(code);
+
         if (box == null)
             return NotFound($"Box with code '{code}' does not exist.");
 
-        return Ok(box);
+        var boxFiles = _boxRepository.GetFiles(code) ?? [];
+        var boxDTO = ConvertToDTO.Box(box, boxFiles);
+        return Ok(boxDTO);
+    }
+
+    [HttpPost("{code}/auth")]
+    [EnableRateLimiting("lenient")]
+    public async Task<IActionResult> AuthorizeBoxAccess(string code, [FromBody] BoxAuthDTO boxAuth)
+    {
+        var box = await _boxRepository.GetBox(code);
+
+        if (box == null)
+            return NotFound($"Box with code '{code}' does not exist.");
+
+        if (box.Password != null)
+        {
+            var hasher = new PasswordHasher<Box>();
+            var passwordCorrect = hasher.VerifyHashedPassword(box, box.Password, boxAuth.Password);
+
+            if (passwordCorrect == PasswordVerificationResult.Failed)
+                return Unauthorized("Incorrect box password");
+        }
+
+        var timeRemaining = box.ExpiresAt - DateTime.UtcNow;
+        var minsTillExpiry = Math.Floor(timeRemaining.TotalMinutes);
+
+        HttpContext.Response.Cookies.Append($"box_auth_{code}", "true", new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            MaxAge = TimeSpan.FromMinutes(minsTillExpiry),
+        });
+
+        return Ok("Authenticated.");
     }
 
     [HttpPost("create")]
     [EnableRateLimiting("strict")]
-    public async Task<IActionResult> CreateBox([FromForm] string? password, [FromForm] List<IFormFile> files)
+    public async Task<IActionResult> CreateBox([FromForm] List<IFormFile> files, [FromForm] string? password)
     {
-        var (createResult, box) = await _boxRepository.CreateBox(password);
+        var (createResult, box) = await _boxRepository.CreateBox(password ?? null);
 
         if (createResult == BoxOperationResult.Error || box == null)
             return StatusCode(500, "An error occurred while creating box.");
@@ -85,6 +128,7 @@ public class BoxController : ControllerBase
     // }
 
     [HttpDelete("{code}/delete")]
+    [BoxAuth("code")]
     [EnableRateLimiting("strict")]
     public async Task<IActionResult> DestroyBox(string code)
     {

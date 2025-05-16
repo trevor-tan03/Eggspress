@@ -18,7 +18,7 @@ public class LocalBoxRepository : IBoxRepository
         _context = context;
     }
 
-    public async Task<BoxDTO?> GetBox(string code)
+    public async Task<Box?> GetBox(string code)
     {
         var box = await _context.Boxes
             .AsNoTracking()
@@ -27,8 +27,7 @@ public class LocalBoxRepository : IBoxRepository
         if (box == null || DateTime.UtcNow > box.ExpiresAt || !Directory.Exists(GetBoxPath(code)))
             return null;
 
-        var files = GetFiles(code);
-        return ConvertToDTO.Box(box, files ?? []);
+        return box;
     }
 
     public async Task<(BoxOperationResult, Box? createdBox)> CreateBox(string? password = null)
@@ -45,7 +44,6 @@ public class LocalBoxRepository : IBoxRepository
             {
                 var hasher = new PasswordHasher<Box>();
                 box.Password = hasher.HashPassword(box, password);
-                _logger.LogInformation(hasher.VerifyHashedPassword(box, box.Password, password).ToString());
             }
 
             await _context.Boxes.AddAsync(box);
@@ -115,7 +113,7 @@ public class LocalBoxRepository : IBoxRepository
         return Path.Combine(_basePath, code);
     }
 
-    private List<FileDTO>? GetFiles(string code)
+    public List<FileDTO>? GetFiles(string code)
     {
         try
         {
