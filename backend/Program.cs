@@ -51,10 +51,8 @@ builder.Services.Configure<FormOptions>(options =>
 builder.Services.Configure<KestrelServerOptions>(options =>
 {
     options.Limits.MaxRequestBodySize = maxRequestBodySize; // for Kestrel
-});
-builder.Services.Configure<IISServerOptions>(options =>
-{
-    options.MaxRequestBodySize = maxRequestBodySize; // for IIS
+    options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
+    options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(10);
 });
 
 builder.Services.AddRateLimiter(options =>
@@ -67,7 +65,7 @@ builder.Services.AddRateLimiter(options =>
             partitionKey: ip,
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 5,
+                PermitLimit = 10,
                 Window = TimeSpan.FromHours(1),
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 2
@@ -101,7 +99,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 
-    var boxDir = Path.Combine(builder.Environment.ContentRootPath, "Boxes");
+    var boxDir = Path.Combine(Directory.GetParent(builder.Environment.ContentRootPath)!.FullName, "Boxes");
     if (!Directory.Exists(boxDir))
         Directory.CreateDirectory(boxDir);
 

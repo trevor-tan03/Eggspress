@@ -5,6 +5,9 @@ using backend.Models;
 using Microsoft.AspNetCore.RateLimiting;
 using backend.util;
 using backend.Filters;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Net.Http.Headers;
 
 namespace backend.Controllers;
 
@@ -67,7 +70,7 @@ public class BoxController : ControllerBase
         {
             HttpOnly = true,
             Secure = true,
-            SameSite = SameSiteMode.Strict,
+            SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict,
             MaxAge = TimeSpan.FromMinutes(minsTillExpiry),
         });
 
@@ -75,57 +78,66 @@ public class BoxController : ControllerBase
     }
 
     [HttpPost("create")]
-    [EnableRateLimiting("strict")]
-    public async Task<IActionResult> CreateBox([FromForm] List<IFormFile> files, [FromForm] string? password)
+    [EnableRateLimiting("lenient")]
+    public async Task<IActionResult> CreateBox([FromForm] string? password)
     {
         var (createResult, box) = await _boxRepository.CreateBox(password ?? null);
 
         if (createResult == BoxOperationResult.Error || box == null)
             return StatusCode(500, "An error occurred while creating box.");
 
-        if (files.Count == 0)
-            return BadRequest("No files have been provided to upload.");
-
-        var distinctFiles = files
-            .GroupBy(f => f.FileName)
-            .Select(g => g.First())
-            .ToList();
-
-        var uploadSize = distinctFiles.Sum(f => f.Length);
-        if (uploadSize / Math.Pow(10, 9) >= 5)
-            return BadRequest("Total size cannot exceed 5 GB");
-
-        var (uploadResult, uploadedFiles) = await _boxRepository.UploadFiles(box.Code, distinctFiles);
-
-        return uploadResult switch
-        {
-            BoxOperationResult.Success => Ok(new { box.Code, uploadedFiles, size = uploadSize }),
-            BoxOperationResult.NotFound => NotFound("Box does not exist."),
-            _ => StatusCode(500, "Error uploading files.")
-        };
+        return Ok(box.Code);
     }
 
-    // [HttpPost("{code}/upload")]
-    // public async Task<IActionResult> UploadFile(string code, List<IFormFile> files)
-    // {
-    //     var box = await _boxRepository.GetBox(code);
+    [HttpPost("{code}/upload/chunk")]
+    [DisableFormValueModelBinding]
+    [EnableRateLimiting("lenient")]
+    public async Task<IActionResult> StreamChunk(string code)
+    {
+        try
+        {
+            var request = HttpContext.Request;
+            if (!request.HasFormContentType)
+                return BadRequest("Expected multipart form data.");
 
-    //     if (box == null)
-    //         return NotFound("Box not found.");
-    //     else if (files.Count == 0)
-    //         return BadRequest("No files have been provided to upload.");
+            var form = await request.ReadFormAsync();
 
-    //     var (result, uploadedFiles) = await _boxRepository.UploadFiles(code, files);
-    //     switch (result)
-    //     {
-    //         case BoxOperationResult.Success:
-    //             return Ok(new { uploadedFiles });
-    //         case BoxOperationResult.NotFound:
-    //             return NotFound("Box does not exist.");
-    //         default:
-    //             return StatusCode(500, "An error occurred while uploading files.");
-    //     }
-    // }
+            var chunk = form.Files["file"];
+            var chunkNumber = int.Parse(form["chunkNumber"]!);
+            var totalChunks = int.Parse(form["totalChunks"]!);
+            var fileId = form["fileId"].ToString();
+            var fileName = form["fileName"].ToString();
+
+            if (chunk == null || chunk.Length == 0)
+                return BadRequest("No chunk uploaded.");
+
+            // Temp folder for assembling chunks
+            var tempFolder = Path.Combine(Path.GetTempPath(), "uploads", fileId);
+            Directory.CreateDirectory(tempFolder);
+
+            // Save chunk with sequential number
+            var chunkPath = Path.Combine(tempFolder, $"{chunkNumber}.part");
+            await using (var stream = new FileStream(chunkPath, FileMode.Create))
+            {
+                await chunk.CopyToAsync(stream);
+            }
+
+            // If all chunks are uploaded, combine them
+            if (Directory.GetFiles(tempFolder).Length == totalChunks)
+            {
+                var boxPath = _boxRepository.GetBoxPath(code);
+                var filePath = Path.Combine(boxPath, fileName);
+                await Chunks.Combine(tempFolder, filePath);
+                Directory.Delete(tempFolder, recursive: true); // Cleanup
+            }
+
+            return Ok(new { success = true, chunksReceived = chunkNumber + 1 });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Upload failed: {ex.Message}");
+        }
+    }
 
     [HttpDelete("{code}/delete")]
     [BoxAuth("code")]

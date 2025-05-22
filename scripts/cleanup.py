@@ -10,7 +10,7 @@ CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(CURR_DIR, "../backend/boxes.db")
 DB_PATH = os.path.normpath(DB_PATH)
 
-BOXES_PATH = os.path.join(CURR_DIR, "../backend/Boxes")
+BOXES_PATH = os.path.join(CURR_DIR, "../Boxes")
 BOXES_PATH = os.path.normpath(BOXES_PATH)
 
 
@@ -18,9 +18,11 @@ def remove_expired_boxes():
     try:
         con = sqlite3.connect(DB_PATH)
         cur = con.cursor()
-        print("Checking for expired boxes...")
 
         now = datetime.now().isoformat()
+        print("==========")
+        print(now)
+        print("Checking for expired boxes...")
 
         cur.execute("SELECT Code FROM Boxes WHERE ExpiresAt < ?", (now,))
         expired_boxes = [row[0] for row in cur.fetchall()]
@@ -42,7 +44,7 @@ def remove_expired_boxes():
         con.close()
 
 
-schedule.every().hour.do(remove_expired_boxes)
+schedule.every(30).minutes.do(remove_expired_boxes)
 
 while True:
     schedule.run_pending()

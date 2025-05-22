@@ -9,7 +9,7 @@ namespace backend.Repositories;
 public class LocalBoxRepository : IBoxRepository
 {
     private readonly ILogger<LocalBoxRepository> _logger;
-    private readonly string _basePath = Path.Combine(Directory.GetCurrentDirectory(), "Boxes");
+    private readonly string _basePath = Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory())!.FullName, "Boxes");
     private readonly BoxDbContext _context;
 
     public LocalBoxRepository(ILogger<LocalBoxRepository> logger, BoxDbContext context)
@@ -87,6 +87,16 @@ public class LocalBoxRepository : IBoxRepository
         }
     }
 
+    public async Task StreamFile(string code, string fileName, Stream stream)
+    {
+        var boxPath = GetBoxPath(code);
+        var filePath = Path.Combine(boxPath, fileName);
+        using (var fileStream = new FileStream(filePath, FileMode.Create))
+        {
+            await stream.CopyToAsync(fileStream);
+        }
+    }
+
     public async Task<BoxOperationResult> DeleteBox(string code)
     {
         try
@@ -108,7 +118,7 @@ public class LocalBoxRepository : IBoxRepository
         }
     }
 
-    private string GetBoxPath(string code)
+    public string GetBoxPath(string code)
     {
         return Path.Combine(_basePath, code);
     }

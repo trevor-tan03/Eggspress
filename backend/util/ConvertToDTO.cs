@@ -2,7 +2,7 @@ using backend.Models;
 
 namespace backend.util;
 
-public record FileDTO(string name, long size);
+public record FileDTO(string Name, long Size, DateTime UploadedAt);
 
 public class ConvertToDTO()
 {
@@ -11,7 +11,7 @@ public class ConvertToDTO()
         var list = new List<FileDTO>();
 
         foreach (FileInfo file in files)
-            list.Add(new FileDTO(file.Name, file.Length));
+            list.Add(new FileDTO(file.Name, file.Length, file.CreationTime));
 
         return list;
     }
