@@ -1,33 +1,35 @@
+import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { setAuth } from "../api/box";
 
-async function handleSubmit(formData: FormData) {
-  const code = formData.get("code");
-
-  if (!code) {
-    console.error("No code provided");
-    return;
-  }
-
-  const authResStatus = await setAuth(code.toString(), formData);
-
-  switch (authResStatus.status) {
-    case 200:
-      window.location.href = `/box/${code}`;
-      break;
-    case 401:
-      console.error("Invalid password");
-      break;
-    case 404:
-      console.error("Box does not exist.");
-      break;
-    default:
-      console.error("An error occurred while authenticating.");
-  }
-}
-
 export default function OpenForm() {
   const [code, setCode] = useState("");
+  const router = useRouter();
+
+  async function handleSubmit(formData: FormData) {
+    const code = formData.get("code");
+
+    if (!code) {
+      console.error("No code provided");
+      return;
+    }
+
+    const authResStatus = await setAuth(code.toString(), formData);
+
+    switch (authResStatus.status) {
+      case 200:
+        router.navigate({ to: `/box/${code}` });
+        break;
+      case 401:
+        console.error("Invalid password");
+        break;
+      case 404:
+        console.error("Box does not exist.");
+        break;
+      default:
+        console.error("An error occurred while authenticating.");
+    }
+  }
 
   return (
     <form

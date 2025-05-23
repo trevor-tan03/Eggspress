@@ -1,6 +1,9 @@
+import { useRouter } from "@tanstack/react-router";
 import { setAuth } from "../api/box";
 
 export default function CreateForm() {
+  const router = useRouter();
+
   async function handleSubmit(formData: FormData) {
     try {
       const createEndpoint = `${import.meta.env.VITE_BACKEND_API}/api/box/create`;
@@ -16,10 +19,11 @@ export default function CreateForm() {
       });
 
       const code = await createRes.text();
-      const authResStatus = await setAuth(code, formData);
+      const authRes = await setAuth(code, formData);
 
-      if (authResStatus === 200) location.href = `/box/${code}`;
-      else console.error("Authentication failed.");
+      if (authRes.status === 200) {
+        router.navigate({ to: `/box/${code}` });
+      } else console.error("Authentication failed.");
     } catch (err) {
       console.error((err as Error).message);
     }

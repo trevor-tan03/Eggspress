@@ -91,7 +91,6 @@ public class BoxController : ControllerBase
 
     [HttpPost("{code}/upload/chunk")]
     [DisableFormValueModelBinding]
-    [EnableRateLimiting("lenient")]
     public async Task<IActionResult> StreamChunk(string code)
     {
         try

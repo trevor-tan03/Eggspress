@@ -1,6 +1,9 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
+import { uploadChunk } from "../api/box";
+import type { FileChunkMetadata } from "../types/BoxTypes";
 import { IFile } from "../types/BoxTypes";
+import { splitIntoChunks } from "../util/chunkFile";
 import UploadedFile from "./UploadedFile";
 
 interface Props {
@@ -11,50 +14,54 @@ interface Props {
 export default function FileUpload({ code, originalFiles }: Props) {
   const [uploadedFiles, setUploadedFiles] = useState(originalFiles);
 
-  async function handleUpload(code: string, files: File[]) {
-    try {
-      const formData = new FormData();
+  async function handleUpload(code: string, file: File) {
+    const chunkSize = 50 * 1024 * 1024; // 50 MB
 
-      for (const file of files) formData.append("files", file); // "files" is the field name expected by your backend
+    const chunks = splitIntoChunks(file, chunkSize);
+    const timeStart = Date.now();
 
-      const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_API}/api/box/${code}/upload`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+    for (const chunk of chunks) {
+      const metadata: FileChunkMetadata = {
+        totalChunks: chunks.length,
+        fileId: `${code}_${Date.now()}_${file.name}`,
+        fileName: file.name,
+      };
 
-      if (!res.ok) {
-        throw new Error("An error occurred while uploading files.");
+      try {
+        const data = await uploadChunk(code, chunk, metadata);
+
+        console.log(`Uploaded chunk ${chunk.number + 1}/${chunks.length}`);
+      } catch (err) {
+        console.error(
+          `Failed chunk ${chunk.number}:\n${(err as Error).message}`
+        );
+        return false;
       }
-
-      return true;
-    } catch (err) {
-      console.error((err as Error).message);
-      return false;
     }
+    const timeEnd = Date.now();
+    console.log(`Completed upload in ${(timeEnd - timeStart) / 1000} seconds`);
+    return true;
   }
 
-  function ToFileDTO(files: File[]) {
-    return files.map((f) => {
-      const file: IFile = {
-        name: f.name,
-        size: f.size,
-      };
-      return file;
-    });
+  function ToFileDTO(f: File) {
+    const file: IFile = {
+      name: f.name,
+      size: f.size,
+    };
+    return file;
   }
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      const uploadSuccess = await handleUpload(code, acceptedFiles);
-
-      if (uploadSuccess) {
-        const dto = ToFileDTO(acceptedFiles);
-        setUploadedFiles((i) => i.concat(dto));
-      } else {
-        console.error(`Failed to upload files: ${uploadSuccess}`);
+      for (let i = 0; i < acceptedFiles.length; i++) {
+        const file = acceptedFiles[i];
+        const uploadSuccess = await handleUpload(code, file);
+        if (uploadSuccess) {
+          const dto = ToFileDTO(file);
+          setUploadedFiles((i) => i.concat(dto));
+        } else {
+          console.error(`Failed to upload files: ${uploadSuccess}`);
+        }
       }
     },
     [code]
