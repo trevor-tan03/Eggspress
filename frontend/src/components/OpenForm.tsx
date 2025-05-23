@@ -1,15 +1,42 @@
 import { useState } from "react";
+import { setAuth } from "../api/box";
 
-function openBox(e: React.FormEvent<HTMLFormElement>, code: string) {
-  e.preventDefault();
-  window.location.href = `/box/${code}`;
+async function handleSubmit(formData: FormData) {
+  const code = formData.get("code");
+
+  if (!code) {
+    console.error("No code provided");
+    return;
+  }
+
+  const authResStatus = await setAuth(code.toString(), formData);
+
+  switch (authResStatus.status) {
+    case 200:
+      window.location.href = `/box/${code}`;
+      break;
+    case 401:
+      console.error("Invalid password");
+      break;
+    case 404:
+      console.error("Box does not exist.");
+      break;
+    default:
+      console.error("An error occurred while authenticating.");
+  }
 }
 
 export default function OpenForm() {
   const [code, setCode] = useState("");
 
   return (
-    <form onSubmit={(e) => openBox(e, code)}>
+    <form
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const form = new FormData(e.currentTarget);
+        await handleSubmit(form);
+      }}
+    >
       <h1 className="text-center text-3xl font-bold">Enter Box Details</h1>
 
       <div className="grid mt-3">
@@ -18,6 +45,7 @@ export default function OpenForm() {
         </label>
         <input
           id="code"
+          name="code"
           className="border-2 border-black rounded-md p-2"
           type="text"
           value={code}
@@ -30,8 +58,8 @@ export default function OpenForm() {
           Password
         </label>
         <input
-          disabled // Disabled for now
           id="password"
+          name="password"
           className="border-2 border-black rounded-md p-2 tracking-widest disabled:bg-gray-200 disabled:cursor-not-allowed"
           type="password"
         />

@@ -22,7 +22,10 @@ function RouteComponent() {
     setLoading(true);
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_API}/api/box/${code}`
+        `${import.meta.env.VITE_BACKEND_API}/api/box/${code}`,
+        {
+          credentials: "include",
+        }
       );
 
       if (!res.ok) throw new Error(`${await res.text()}`);

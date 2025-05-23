@@ -1,11 +1,12 @@
+import { setAuth } from "../api/box";
+
 export default function CreateForm() {
   async function handleSubmit(formData: FormData) {
     try {
       const createEndpoint = `${import.meta.env.VITE_BACKEND_API}/api/box/create`;
-      console.log(import.meta.env.BACKEND_API);
-
-      const res = await fetch(createEndpoint, {
+      const createRes = await fetch(createEndpoint, {
         method: "POST",
+        credentials: "include",
         body: JSON.stringify({
           password: formData.get("password"),
         }),
@@ -14,8 +15,11 @@ export default function CreateForm() {
         },
       });
 
-      const code = await res.text();
-      location.href = `/box/${code}`;
+      const code = await createRes.text();
+      const authResStatus = await setAuth(code, formData);
+
+      if (authResStatus === 200) location.href = `/box/${code}`;
+      else console.error("Authentication failed.");
     } catch (err) {
       console.error((err as Error).message);
     }
@@ -30,7 +34,6 @@ export default function CreateForm() {
           Password
         </label>
         <input
-          disabled // Disabled for now
           id="password"
           name="password"
           className="border-2 border-black rounded-md p-2 tracking-widest disabled:bg-gray-200 disabled:cursor-not-allowed"

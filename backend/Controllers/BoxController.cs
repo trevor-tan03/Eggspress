@@ -70,7 +70,7 @@ public class BoxController : ControllerBase
         {
             HttpOnly = true,
             Secure = true,
-            SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict,
+            SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None,
             MaxAge = TimeSpan.FromMinutes(minsTillExpiry),
         });
 
