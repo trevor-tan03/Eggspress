@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { uploadChunk } from "../api/box";
+import { fetchBoxDetails, uploadChunk } from "../api/box";
 import type { FileChunkMetadata } from "../types/BoxTypes";
 import { IFile } from "../types/BoxTypes";
 import { splitIntoChunks } from "../util/chunkFile";
@@ -28,8 +28,7 @@ export default function FileUpload({ code, originalFiles }: Props) {
       };
 
       try {
-        const data = await uploadChunk(code, chunk, metadata);
-
+        await uploadChunk(code, chunk, metadata);
         console.log(`Uploaded chunk ${chunk.number + 1}/${chunks.length}`);
       } catch (err) {
         console.error(
@@ -43,26 +42,18 @@ export default function FileUpload({ code, originalFiles }: Props) {
     return true;
   }
 
-  function ToFileDTO(f: File) {
-    const file: IFile = {
-      name: f.name,
-      size: f.size,
-    };
-    return file;
-  }
-
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       for (let i = 0; i < acceptedFiles.length; i++) {
         const file = acceptedFiles[i];
         const uploadSuccess = await handleUpload(code, file);
-        if (uploadSuccess) {
-          const dto = ToFileDTO(file);
-          setUploadedFiles((i) => i.concat(dto));
-        } else {
+        if (!uploadSuccess) {
           console.error(`Failed to upload files: ${uploadSuccess}`);
         }
       }
+
+      const boxDetails = await fetchBoxDetails(code);
+      if (boxDetails) setUploadedFiles(boxDetails.files);
     },
     [code]
   );

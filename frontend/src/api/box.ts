@@ -1,6 +1,6 @@
 import type { BoxDTO, FileChunk, FileChunkMetadata } from "../types/BoxTypes";
 
-export async function fetchBoxDetails(code: string): Promise<BoxDTO[]> {
+export async function fetchBoxDetails(code: string): Promise<BoxDTO | null> {
   const res = await fetch(
     `${import.meta.env.VITE_BACKEND_API}/api/box/${code}`,
     {
@@ -21,7 +21,7 @@ export async function fetchBoxDetails(code: string): Promise<BoxDTO[]> {
       console.error(`Unexpected error occurred while retrieving box details.`);
   }
 
-  return [];
+  return null;
 }
 
 export async function setAuth(code: string, formData: FormData) {
