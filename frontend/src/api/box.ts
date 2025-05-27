@@ -62,3 +62,12 @@ export async function uploadChunk(
   if (!res.ok) throw new Error(`Chunk ${chunk.number} failed.`);
   return res.json();
 }
+
+export async function getUploadedChunks(code: string, fileId: string) {
+  const res = await fetch(
+    `${import.meta.env.VITE_BACKEND_API}/api/box/${code}/upload/status/${fileId}}`
+  );
+
+  const resBody = (await res.json()) as { uploadedChunks: number[] };
+  return resBody.uploadedChunks;
+}

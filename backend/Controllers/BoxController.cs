@@ -8,6 +8,7 @@ using backend.Filters;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
+using System.Web;
 
 namespace backend.Controllers;
 
@@ -136,6 +137,23 @@ public class BoxController : ControllerBase
         {
             return StatusCode(500, $"Upload failed: {ex.Message}");
         }
+    }
+
+    [HttpGet("{code}/upload/status/{fileId}")]
+    public IActionResult GetUploadStatus(string code, string fileId)
+    {
+        fileId = HttpUtility.HtmlDecode(fileId);
+        var tempFolder = Path.Combine(Path.GetTempPath(), "uploads", fileId);
+
+        // File already done uploading or never uploaded
+        if (!Directory.Exists(tempFolder))
+            return Ok(new { uploadedChunks = new List<int>() });
+
+        var chunks = Directory.GetFiles(tempFolder)
+            .Select(path => int.Parse(Path.GetFileNameWithoutExtension(path)))
+            .ToList();
+
+        return Ok(chunks);
     }
 
     [HttpDelete("{code}/delete")]

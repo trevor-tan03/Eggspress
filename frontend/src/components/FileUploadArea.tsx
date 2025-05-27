@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { fetchBoxDetails, uploadChunk } from "../api/box";
-import type { FileChunkMetadata } from "../types/BoxTypes";
+import { fetchBoxDetails, getUploadedChunks, uploadChunk } from "../api/box";
+import type { FileChunkMetadata, IFileUploading } from "../types/BoxTypes";
 import { IFile } from "../types/BoxTypes";
 import { splitIntoChunks } from "../util/chunkFile";
 import UploadedFile from "./UploadedFile";
@@ -13,6 +13,7 @@ interface Props {
 
 export default function FileUpload({ code, originalFiles }: Props) {
   const [uploadedFiles, setUploadedFiles] = useState(originalFiles);
+  const [filesUploading, setFilesUploading] = useState<IFileUploading[]>([]);
 
   async function handleUpload(code: string, file: File) {
     const chunkSize = 50 * 1024 * 1024; // 50 MB
@@ -20,15 +21,36 @@ export default function FileUpload({ code, originalFiles }: Props) {
     const chunks = splitIntoChunks(file, chunkSize);
     const timeStart = Date.now();
 
+    const uploadedChunkNumbers: number[] = await getUploadedChunks(
+      code,
+      encodeURIComponent(file.name)
+    );
+
     for (const chunk of chunks) {
       const metadata: FileChunkMetadata = {
         totalChunks: chunks.length,
-        fileId: `${code}_${Date.now()}_${file.name}`,
+        fileId: `${code}_${file.name}`,
         fileName: file.name,
       };
 
       try {
+        if (uploadedChunkNumbers.includes(chunk.number)) {
+          console.log(`Skipping chunk ${chunk.number}`);
+          continue;
+        }
+
         await uploadChunk(code, chunk, metadata);
+        setFilesUploading((files) =>
+          files.map((f) => {
+            if (f.name === file.name)
+              return {
+                ...f,
+                progress: chunk.number / metadata.totalChunks,
+                state: "uploading",
+              };
+            return f;
+          })
+        );
         console.log(`Uploaded chunk ${chunk.number + 1}/${chunks.length}`);
       } catch (err) {
         console.error(
@@ -39,11 +61,22 @@ export default function FileUpload({ code, originalFiles }: Props) {
     }
     const timeEnd = Date.now();
     console.log(`Completed upload in ${(timeEnd - timeStart) / 1000} seconds`);
+    setFilesUploading((files) => files.filter((f) => f.name !== file.name));
     return true;
   }
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
+      setFilesUploading(
+        acceptedFiles.map((f) => {
+          return {
+            name: f.name,
+            progress: 0,
+            state: "waiting",
+          };
+        })
+      );
+
       for (let i = 0; i < acceptedFiles.length; i++) {
         const file = acceptedFiles[i];
         const uploadSuccess = await handleUpload(code, file);
@@ -92,6 +125,13 @@ export default function FileUpload({ code, originalFiles }: Props) {
               {uploadedFiles.map((file, i) => (
                 <li key={i}>
                   <UploadedFile code={code} file={file} />
+                </li>
+              ))}
+              {filesUploading.map((file, i) => (
+                <li key={`uploading-${i}`}>
+                  <div>
+                    {file.name} {Math.round(file.progress * 100)}%
+                  </div>
                 </li>
               ))}
             </ul>

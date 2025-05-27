@@ -3,6 +3,12 @@ export interface IFile {
   size: number;
 }
 
+export interface IFileUploading {
+  name: string;
+  progress: number; // decimal (0-1)
+  state: "uploading" | "paused" | "cancelled" | "waiting";
+}
+
 export interface BoxDTO {
   code: string;
   expiresAt: string;
