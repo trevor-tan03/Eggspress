@@ -18,6 +18,7 @@ builder.Logging.AddConsole();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IBoxRepository, LocalBoxRepository>();
+builder.Services.AddScoped<IFileRepository, FileRepository>();
 builder.Services.AddControllers();
 
 string allowSpecificOrigins = "BINGO LINGO";

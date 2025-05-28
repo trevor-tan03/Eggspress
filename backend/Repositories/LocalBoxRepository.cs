@@ -3,6 +3,7 @@ using backend.Models;
 using backend.util;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 
 namespace backend.Repositories;
 
@@ -11,11 +12,13 @@ public class LocalBoxRepository : IBoxRepository
     private readonly ILogger<LocalBoxRepository> _logger;
     private readonly string _basePath = Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory())!.FullName, "Boxes");
     private readonly BoxDbContext _context;
+    private readonly IFileRepository _fileRepository;
 
-    public LocalBoxRepository(ILogger<LocalBoxRepository> logger, BoxDbContext context)
+    public LocalBoxRepository(ILogger<LocalBoxRepository> logger, BoxDbContext context, IFileRepository fileRepository)
     {
         _logger = logger;
         _context = context;
+        _fileRepository = fileRepository;
     }
 
     public async Task<Box?> GetBox(string code)
@@ -59,34 +62,6 @@ public class LocalBoxRepository : IBoxRepository
         }
     }
 
-    public async Task<(BoxOperationResult, List<FileDTO>?)> UploadFiles(string code, List<IFormFile> files)
-    {
-        try
-        {
-            var boxPath = GetBoxPath(code);
-            if (!Directory.Exists(boxPath))
-            {
-                _logger.LogWarning("Tried to upload files to non-existent box: {Code}", code);
-                return (BoxOperationResult.NotFound, null);
-            }
-
-            var tasks = files.Select(async file =>
-            {
-                var filePath = Path.Combine(boxPath, file.FileName);
-                await using var stream = new FileStream(filePath, FileMode.Create);
-                await file.CopyToAsync(stream);
-            });
-            await Task.WhenAll(tasks);
-
-            return (BoxOperationResult.Success, GetFiles(code)); // Returns updated files list
-        }
-        catch (Exception err)
-        {
-            _logger.LogError(err, "Error occurred while uploading files.");
-            return (BoxOperationResult.Error, null);
-        }
-    }
-
     public async Task StreamFile(string code, string fileName, Stream stream)
     {
         var boxPath = GetBoxPath(code);
@@ -123,7 +98,7 @@ public class LocalBoxRepository : IBoxRepository
         return Path.Combine(_basePath, code);
     }
 
-    public List<FileDTO>? GetFiles(string code)
+    public async Task<List<FileDTO>?> GetFiles(string code)
     {
         try
         {
@@ -131,6 +106,14 @@ public class LocalBoxRepository : IBoxRepository
             var dirInfo = new DirectoryInfo(boxPath);
             var files = dirInfo.GetFiles();
             var filesDTO = ConvertToDTO.Files(files);
+
+            for (int i = 0; i < filesDTO.Count; i++)
+            {
+                var originalName = await _fileRepository.GetOriginalFileName(code, filesDTO[i].Name);
+                if (originalName != null)
+                    filesDTO[i].Name = originalName;
+            }
+
             return filesDTO;
         }
         catch (Exception ex)

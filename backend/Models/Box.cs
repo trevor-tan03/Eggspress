@@ -10,6 +10,8 @@ public class Box
     public DateTime ExpiresAt { get; set; }
     public string? Password { get; set; }
 
+    public ICollection<Models.File> Files { get; set; } = new List<Models.File>();
+
     public Box(string code)
     {
         Code = code;

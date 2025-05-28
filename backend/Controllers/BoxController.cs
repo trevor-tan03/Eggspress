@@ -24,11 +24,13 @@ public class BoxController : ControllerBase
 {
     private readonly ILogger<BoxController> _logger;
     private readonly IBoxRepository _boxRepository;
+    private readonly IFileRepository _fileRepository;
 
-    public BoxController(ILogger<BoxController> logger, IBoxRepository boxRepository)
+    public BoxController(ILogger<BoxController> logger, IBoxRepository boxRepository, IFileRepository fileRepository)
     {
         _logger = logger;
         _boxRepository = boxRepository;
+        _fileRepository = fileRepository;
     }
 
     [HttpGet("{code}")]
@@ -41,7 +43,7 @@ public class BoxController : ControllerBase
         if (box == null)
             return NotFound($"Box with code '{code}' does not exist.");
 
-        var boxFiles = _boxRepository.GetFiles(code) ?? [];
+        var boxFiles = await _boxRepository.GetFiles(code) ?? [];
         var boxDTO = ConvertToDTO.Box(box, boxFiles);
         return Ok(boxDTO);
     }
@@ -111,6 +113,14 @@ public class BoxController : ControllerBase
             if (chunk == null || chunk.Length == 0)
                 return BadRequest("No chunk uploaded.");
 
+            // Map file to random file name
+            if (chunkNumber == 0)
+            {
+                var extension = Path.GetExtension(fileName);
+                var randomName = Guid.NewGuid().ToString("N") + extension;
+                await _fileRepository.AddFile(code, fileId, fileName, randomName);
+            }
+
             // Temp folder for assembling chunks
             var tempFolder = Path.Combine(Path.GetTempPath(), "uploads", fileId);
             Directory.CreateDirectory(tempFolder);
@@ -125,10 +135,14 @@ public class BoxController : ControllerBase
             // If all chunks are uploaded, combine them
             if (Directory.GetFiles(tempFolder).Length == totalChunks)
             {
-                var boxPath = _boxRepository.GetBoxPath(code);
-                var filePath = Path.Combine(boxPath, fileName);
-                await Chunks.Combine(tempFolder, filePath);
-                Directory.Delete(tempFolder, recursive: true); // Cleanup
+                var file = await _fileRepository.GetFileById(code, fileId);
+                if (file != null)
+                {
+                    var boxPath = _boxRepository.GetBoxPath(code);
+                    var filePath = Path.Combine(boxPath, file.RandomFileName!);
+                    await Chunks.Combine(tempFolder, filePath);
+                    Directory.Delete(tempFolder, recursive: true); // Cleanup
+                }
             }
 
             return Ok(new { success = true, chunksReceived = chunkNumber + 1 });
