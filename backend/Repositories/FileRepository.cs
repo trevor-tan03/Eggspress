@@ -43,4 +43,15 @@ public class FileRepository : IFileRepository
             throw new FileNotFoundException("No file with the name " + randomFileName);
         return file.OriginalFileName;
     }
+
+    public async Task<string?> GetRandomFileName(string boxCode, string originalFileName)
+    {
+        var file = await _context.Files
+            .AsNoTracking()
+            .FirstOrDefaultAsync(f => f.BoxCode == boxCode && f.OriginalFileName == originalFileName);
+
+        if (file == null)
+            throw new FileNotFoundException("No file with the name " + originalFileName);
+        return file.RandomFileName;
+    }
 }

@@ -10,7 +10,7 @@ namespace backend.Repositories;
 public class LocalBoxRepository : IBoxRepository
 {
     private readonly ILogger<LocalBoxRepository> _logger;
-    private readonly string _basePath = Path.Combine(Directory.GetParent(Directory.GetCurrentDirectory())!.FullName, "Boxes");
+    private readonly string _basePath = Path.Combine(Path.GetTempPath(), "Boxes");
     private readonly BoxDbContext _context;
     private readonly IFileRepository _fileRepository;
 
