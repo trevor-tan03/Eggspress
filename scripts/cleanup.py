@@ -1,9 +1,9 @@
+import datetime
 import os
 import shutil
 import sqlite3
 import tempfile
 import time
-from datetime import datetime
 
 import schedule
 
@@ -19,10 +19,12 @@ def remove_expired_boxes():
     try:
         con = sqlite3.connect(DB_PATH)
         cur = con.cursor()
+        cur.execute("PRAGMA foreign_keys = ON;")
 
-        now = datetime.now().isoformat()
+        # Format now to match EF Core (SQLite) datetime format
+        now = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f")
         print("==========")
-        print(now)
+        print("Now:", now)
         print("Checking for expired boxes...")
 
         cur.execute("SELECT Code FROM Boxes WHERE ExpiresAt < ?", (now,))
@@ -45,7 +47,7 @@ def remove_expired_boxes():
         con.close()
 
 
-schedule.every(30).minutes.do(remove_expired_boxes)
+schedule.every(10).minutes.do(remove_expired_boxes)
 
 while True:
     schedule.run_pending()

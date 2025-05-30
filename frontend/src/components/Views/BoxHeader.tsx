@@ -1,3 +1,4 @@
+import { deleteBox } from "../../api/box";
 import BoxTimer from "../BoxTimer";
 
 interface Props {
@@ -8,14 +9,8 @@ interface Props {
 
 export default function BoxHeader({ code, expiresAt, setExpired }: Props) {
   async function DeleteBox(code: string) {
-    const res = await fetch(
-      `${import.meta.env.VITE_BACKEND_API}/api/box/${code}/delete`,
-      {
-        method: "DELETE",
-      }
-    );
-
-    if (res.ok) setExpired(true);
+    const success = await deleteBox(code);
+    if (success) setExpired(true);
   }
 
   return (

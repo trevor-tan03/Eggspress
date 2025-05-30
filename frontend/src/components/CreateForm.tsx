@@ -1,24 +1,12 @@
 import { useRouter } from "@tanstack/react-router";
-import { setAuth } from "../api/box";
+import { createBox, setAuth } from "../api/box";
 
 export default function CreateForm() {
   const router = useRouter();
 
   async function handleSubmit(formData: FormData) {
     try {
-      const createEndpoint = `${import.meta.env.VITE_BACKEND_API}/api/box/create`;
-      const createRes = await fetch(createEndpoint, {
-        method: "POST",
-        credentials: "include",
-        body: JSON.stringify({
-          password: formData.get("password"),
-        }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const code = await createRes.text();
+      const code = await createBox(formData);
       const authRes = await setAuth(code, formData);
 
       if (authRes.status === 200) {

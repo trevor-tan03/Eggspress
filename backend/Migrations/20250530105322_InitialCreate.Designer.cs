@@ -11,8 +11,8 @@ using backend.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(BoxDbContext))]
-    [Migration("20250528065916_AddFileTable")]
-    partial class AddFileTable
+    [Migration("20250530105322_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -45,6 +45,7 @@ namespace backend.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("BoxCode")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("OriginalFileName")
@@ -65,7 +66,8 @@ namespace backend.Migrations
                     b.HasOne("backend.Models.Box", "Box")
                         .WithMany("Files")
                         .HasForeignKey("BoxCode")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Box");
                 });

@@ -23,7 +23,6 @@ public class BoxAuthAttribute : Attribute, IAsyncActionFilter
 
         string code = codeObj.ToString()!;
         var cookie = $"box_auth_{code}";
-        Console.WriteLine(cookie);
         var cookies = context.HttpContext.Request.Cookies;
 
         var boxCookieExists = cookies.TryGetValue(cookie, out var boxCookieValue);

@@ -42,6 +42,7 @@ namespace backend.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("BoxCode")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("OriginalFileName")
@@ -62,7 +63,8 @@ namespace backend.Migrations
                     b.HasOne("backend.Models.Box", "Box")
                         .WithMany("Files")
                         .HasForeignKey("BoxCode")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Box");
                 });

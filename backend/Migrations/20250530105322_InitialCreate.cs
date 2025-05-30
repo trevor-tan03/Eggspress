@@ -1,15 +1,30 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace backend.Migrations
 {
     /// <inheritdoc />
-    public partial class AddFileTable : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "Boxes",
+                columns: table => new
+                {
+                    Code = table.Column<string>(type: "TEXT", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    Password = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Boxes", x => x.Code);
+                });
+
             migrationBuilder.CreateTable(
                 name: "Files",
                 columns: table => new
@@ -17,7 +32,7 @@ namespace backend.Migrations
                     Id = table.Column<string>(type: "TEXT", nullable: false),
                     OriginalFileName = table.Column<string>(type: "TEXT", nullable: true),
                     RandomFileName = table.Column<string>(type: "TEXT", nullable: true),
-                    BoxCode = table.Column<string>(type: "TEXT", nullable: true)
+                    BoxCode = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -41,6 +56,9 @@ namespace backend.Migrations
         {
             migrationBuilder.DropTable(
                 name: "Files");
+
+            migrationBuilder.DropTable(
+                name: "Boxes");
         }
     }
 }

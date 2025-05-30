@@ -11,13 +11,13 @@ public class BoxDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        modelBuilder.Entity<Box>().HasKey(b => b.Code);
+        modelBuilder.Entity<Box>()
+            .HasKey(b => b.Code);
 
         modelBuilder.Entity<Models.File>()
             .HasOne(f => f.Box)
             .WithMany(b => b.Files)
             .HasForeignKey(f => f.BoxCode)
-            .HasPrincipalKey(b => b.Code)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasPrincipalKey(b => b.Code);
     }
 }

@@ -12,7 +12,7 @@ namespace backend.Models
         // Store file with RandomFileName
         public string? RandomFileName { get; set; }
 
-        public string? BoxCode { get; set; }
+        public string BoxCode { get; set; } = default!;
         public Box? Box { get; set; }
     }
 }

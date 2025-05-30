@@ -49,7 +49,7 @@ public class BoxController : ControllerBase
     }
 
     [HttpPost("{code}/auth")]
-    [EnableRateLimiting("lenient")]
+    //[EnableRateLimiting("lenient")]
     public async Task<IActionResult> AuthorizeBoxAccess(string code, [FromBody] BoxAuthDTO boxAuth)
     {
         var box = await _boxRepository.GetBox(code);

@@ -40,6 +40,18 @@ export async function setAuth(code: string, formData: FormData) {
   return authRes;
 }
 
+export async function createBox(formData: FormData) {
+  const createEndpoint = `${import.meta.env.VITE_BACKEND_API}/api/box/create`;
+  const createRes = await fetch(createEndpoint, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  const code = await createRes.text();
+  return code;
+}
+
 export async function uploadChunk(
   boxCode: string,
   chunk: FileChunk,
@@ -70,4 +82,16 @@ export async function getUploadedChunks(code: string, fileId: string) {
 
   const resBody = (await res.json()) as { uploadedChunks: number[] };
   return resBody.uploadedChunks;
+}
+
+export async function deleteBox(code: string) {
+  const res = await fetch(
+    `${import.meta.env.VITE_BACKEND_API}/api/box/${code}/delete`,
+    {
+      method: "DELETE",
+      credentials: "include",
+    }
+  );
+
+  return res.ok;
 }

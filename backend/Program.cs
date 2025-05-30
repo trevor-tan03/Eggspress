@@ -27,7 +27,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: allowSpecificOrigins,
     policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
+        policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173", "http://192.168.1.77:5173")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -99,16 +99,6 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-
-    var boxDir = Path.Combine(Directory.GetParent(builder.Environment.ContentRootPath)!.FullName, "Boxes");
-    if (!Directory.Exists(boxDir))
-        Directory.CreateDirectory(boxDir);
-
-    app.UseStaticFiles(new StaticFileOptions
-    {
-        FileProvider = new PhysicalFileProvider(boxDir),
-        RequestPath = "/files"
-    });
 }
 
 app.UseCors(allowSpecificOrigins);
