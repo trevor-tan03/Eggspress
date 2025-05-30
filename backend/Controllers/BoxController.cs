@@ -67,14 +67,14 @@ public class BoxController : ControllerBase
         }
 
         var timeRemaining = box.ExpiresAt - DateTime.UtcNow;
-        var minsTillExpiry = Math.Floor(timeRemaining.TotalMinutes);
+        var secsTillExpiry = timeRemaining.TotalSeconds;
 
         HttpContext.Response.Cookies.Append($"box_auth_{code}", "true", new CookieOptions
         {
             HttpOnly = true,
             Secure = true,
             SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None,
-            MaxAge = TimeSpan.FromMinutes(minsTillExpiry),
+            MaxAge = TimeSpan.FromSeconds(secsTillExpiry),
         });
 
         return Ok("Authenticated.");

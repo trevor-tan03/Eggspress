@@ -11,7 +11,7 @@ CURR_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(CURR_DIR, "../backend/boxes.db")
 DB_PATH = os.path.normpath(DB_PATH)
 
-BOXES_PATH = os.path.join(tempfile.gettempdir(), "uploads")
+BOXES_PATH = os.path.join(tempfile.gettempdir(), "Boxes")
 BOXES_PATH = os.path.normpath(BOXES_PATH)
 
 
