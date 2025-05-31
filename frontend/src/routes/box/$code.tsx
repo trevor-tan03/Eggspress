@@ -59,6 +59,7 @@ function RouteComponent() {
         setExpired={setExpired}
       />
       <FileUploadArea code={code} originalFiles={boxDetails.files} />
+      <div>{(boxDetails.boxSize / 1024 ** 2).toFixed(2)} MB</div>
     </div>
   );
 }

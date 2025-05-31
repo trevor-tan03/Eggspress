@@ -12,6 +12,7 @@ export interface IFileUploading {
 export interface BoxDTO {
   code: string;
   expiresAt: string;
+  boxSize: number;
   files: IFile[];
 }
 

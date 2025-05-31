@@ -1,5 +1,6 @@
 using backend.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection.Emit;
 
 namespace backend.Repositories;
 
@@ -53,5 +54,17 @@ public class FileRepository : IFileRepository
         if (file == null)
             throw new FileNotFoundException("No file with the name " + originalFileName);
         return file.RandomFileName;
+    }
+
+    public async Task IncreaseBytesSize(string fileId, long bytesSize)
+    {
+        var file = await _context.Files
+            .FirstOrDefaultAsync(f => f.Id == fileId);
+
+        if (file == null)
+            throw new FileNotFoundException("No file with the id " + fileId);
+
+        file.SizeBytes += bytesSize;
+        await _context.SaveChangesAsync();
     }
 }

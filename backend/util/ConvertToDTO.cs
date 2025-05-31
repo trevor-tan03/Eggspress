@@ -5,7 +5,7 @@ namespace backend.util;
 public class FileDTO
 {
     public string Name { get; set; }
-    public long Size { get; set; } 
+    public long Size { get; set; }
     public DateTime UploadedAt { get; set; }
 }
 
@@ -18,8 +18,8 @@ public class ConvertToDTO()
         foreach (FileInfo file in files)
             list.Add(new FileDTO
             {
-                Name = file.Name, 
-                Size = file.Length, 
+                Name = file.Name,
+                Size = file.Length,
                 UploadedAt = file.CreationTime
             });
 
@@ -28,6 +28,7 @@ public class ConvertToDTO()
 
     public static BoxDTO Box(Box box, List<FileDTO> files)
     {
-        return new BoxDTO(box.Code, box.ExpiresAt, files);
+        var boxSize = files.Sum(f => f.Size);
+        return new BoxDTO(box.Code, box.ExpiresAt, boxSize, files);
     }
 }

@@ -13,6 +13,7 @@ namespace backend.Models
         public string? RandomFileName { get; set; }
 
         public string BoxCode { get; set; } = default!;
+        public long SizeBytes { get; set; }
         public Box? Box { get; set; }
     }
 }

@@ -1,3 +1,3 @@
 using backend.util;
 
-public record BoxDTO(string code, DateTime expiresAt, List<FileDTO> files);
+public record BoxDTO(string code, DateTime expiresAt, long boxSize, List<FileDTO> files);

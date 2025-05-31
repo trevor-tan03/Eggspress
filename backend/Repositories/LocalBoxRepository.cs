@@ -25,6 +25,7 @@ public class LocalBoxRepository : IBoxRepository
     {
         var box = await _context.Boxes
             .AsNoTracking()
+            .Include(b => b.Files)
             .FirstOrDefaultAsync(x => x.Code == code);
 
         if (box == null || DateTime.UtcNow > box.ExpiresAt || !Directory.Exists(GetBoxPath(code)))
