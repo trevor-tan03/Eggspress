@@ -56,15 +56,22 @@ public class FileRepository : IFileRepository
         return file.RandomFileName;
     }
 
-    public async Task IncreaseBytesSize(string fileId, long bytesSize)
+    public async Task<Boolean> TryAddChunkSize(string boxCode, string fileId, long chunkSize, long maxBoxSize)
     {
-        var file = await _context.Files
-            .FirstOrDefaultAsync(f => f.Id == fileId);
+        var boxFiles = _context.Files.Where(f => f.BoxCode == boxCode);
+        var totalSize = await boxFiles.SumAsync(f => f.SizeBytes);
 
-        if (file == null)
-            throw new FileNotFoundException("No file with the id " + fileId);
+        if (totalSize + chunkSize > maxBoxSize)
+            return false;
 
-        file.SizeBytes += bytesSize;
-        await _context.SaveChangesAsync();
+        var file = await _context.Files.FirstOrDefaultAsync(f => f.Id == fileId);
+        if (file != null)
+        {
+            file.SizeBytes += chunkSize;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        return false;
     }
 }

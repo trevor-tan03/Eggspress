@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Http.Features;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IBoxRepository, LocalBoxRepository>();
 builder.Services.AddScoped<IFileRepository, FileRepository>();
+builder.Services.AddScoped<IUploadService, UploadService>();
 builder.Services.AddControllers();
 
 string allowSpecificOrigins = "BINGO LINGO";

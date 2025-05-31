@@ -23,17 +23,11 @@ public class BoxAuthAttribute : Attribute, IAsyncActionFilter
 
         string code = codeObj.ToString()!;
         var cookie = $"box_auth_{code}";
-        var cookies = context.HttpContext.Request.Cookies;
 
-        var boxCookieExists = cookies.TryGetValue(cookie, out var boxCookieValue);
-        if (!boxCookieExists)
+        var boxCookieExists = context.HttpContext.Request.Cookies.TryGetValue(cookie, out var boxCookieValue);
+        if (!boxCookieExists || boxCookieValue != "true")
         {
-            context.Result = new UnauthorizedObjectResult("Unauthorized: Password required.");
-            return;
-        }
-        else if (boxCookieValue != "true")
-        {
-            context.Result = new UnauthorizedObjectResult("Incorrect password provided.");
+            context.Result = new UnauthorizedObjectResult("Unauthorized or incorrect password.");
             return;
         }
 

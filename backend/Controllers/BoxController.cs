@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using System.Web;
+using backend.Services;
 
 namespace backend.Controllers;
 
@@ -25,14 +26,14 @@ public class BoxController : ControllerBase
     private readonly ILogger<BoxController> _logger;
     private readonly IBoxRepository _boxRepository;
     private readonly IFileRepository _fileRepository;
-    private readonly long MAX_BOX_SIZE;
+    private readonly IUploadService _uploadService;
 
-    public BoxController(ILogger<BoxController> logger, IBoxRepository boxRepository, IFileRepository fileRepository)
+    public BoxController(ILogger<BoxController> logger, IBoxRepository boxRepository, IFileRepository fileRepository, IUploadService uploadService)
     {
         _logger = logger;
         _boxRepository = boxRepository;
         _fileRepository = fileRepository;
-        MAX_BOX_SIZE = 5L * 1024 * 1024;
+        _uploadService = uploadService;
     }
 
     [HttpGet("{code}")]
@@ -102,65 +103,40 @@ public class BoxController : ControllerBase
         try
         {
             var box = await _boxRepository.GetBox(code);
-            if (box == null)
+            if (box is null)
                 return NotFound("Box not found.");
 
-            var request = HttpContext.Request;
-            if (!request.HasFormContentType)
-                return BadRequest("Expected multipart form data.");
+            var model = await UploadRequestModel.FromFormAsync(Request);
+            if (model is null)
+                return BadRequest("Invalid or missing form data");
 
-            var form = await request.ReadFormAsync();
+            if (model.FileName.Length > 100)
+                return BadRequest("File name must not exceed 100 characters.");
 
-            var chunk = form.Files["file"];
-            var chunkNumber = int.Parse(form["chunkNumber"]!);
-            var totalChunks = int.Parse(form["totalChunks"]!);
-            var fileId = form["fileId"].ToString();
-            var fileName = form["fileName"].ToString();
+            if (model.ChunkNumber < 0 || model.ChunkNumber >= model.TotalChunks)
+                return BadRequest("Invalid chunk number");
 
-            var currentBoxSize = box.Files.Sum(f => f.SizeBytes);
-            // Temp folder for assembling chunks
-            var tempFolder = Path.Combine(Path.GetTempPath(), "uploads", fileId);
+            var tempFolder = Path.Combine(Path.GetTempPath(), "uploads", model.FileId);
             Directory.CreateDirectory(tempFolder);
 
-            if (chunk == null || chunk.Length == 0)
-                return BadRequest("No chunk uploaded.");
-            else if (currentBoxSize + chunk.Length > MAX_BOX_SIZE)
-            {
-                Directory.Delete(tempFolder);
-                return BadRequest("Box size cannot exceed 5 MB.");
-            }
-
             // Map file to random file name
-            if (chunkNumber == 0)
+            if (model.ChunkNumber == 0)
             {
-                var extension = Path.GetExtension(fileName);
+                var extension = Path.GetExtension(model.FileName);
                 var randomName = Guid.NewGuid().ToString("N") + extension;
-                await _fileRepository.AddFile(code, fileId, fileName, randomName);
+                await _fileRepository.AddFile(code, model.FileId, model.FileName, randomName);
             }
 
-            // Save chunk with sequential number
-            var chunkPath = Path.Combine(tempFolder, $"{chunkNumber}.part");
-            var file = await _fileRepository.GetFileById(code, fileId);
+            var allowed = await _uploadService.TryEnforceBoxSizeLimitAsync(code, model.FileId, model.Chunk.Length);
+            if (!allowed)
+                return BadRequest("Box size exceeded 5 GB.");
 
-            await using (var stream = new FileStream(chunkPath, FileMode.Create))
-            {
-                await chunk.CopyToAsync(stream);
-                await _fileRepository.IncreaseBytesSize(fileId, chunk.Length);
-            }
+            var chunkPath = Path.Combine(tempFolder, $"{model.ChunkNumber}.part");
+            await _uploadService.SaveChunkAsync(model.Chunk, chunkPath);
 
-            // If all chunks are uploaded, combine them
-            if (Directory.GetFiles(tempFolder).Length == totalChunks)
-            {
-                if (file != null)
-                {
-                    var boxPath = _boxRepository.GetBoxPath(code);
-                    var filePath = Path.Combine(boxPath, file.RandomFileName!);
-                    await Chunks.Combine(tempFolder, filePath);
-                    Directory.Delete(tempFolder, recursive: true); // Cleanup
-                }
-            }
+            var combined = await _uploadService.CombineIfComplete(code, model.FileId, model.TotalChunks, tempFolder);
 
-            return Ok(new { success = true, chunksReceived = chunkNumber + 1 });
+            return Ok(new { success = true, chunksReceived = model.ChunkNumber + 1, combined });
         }
         catch (Exception ex)
         {
