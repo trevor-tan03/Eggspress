@@ -7,6 +7,7 @@ public interface IBoxRepository
 {
     public string GetBoxPath(string code);
     public Task<Box?> GetBox(string code);
+    public Task<long> GetBoxSize(string code);
     public Task<(BoxOperationResult, Box? createdBox)> CreateBox(string? password = null);
     public Task<List<FileDTO>?> GetFiles(string code);
     //public Task<(BoxOperationResult, List<FileDTO>?)> UploadFiles(string code, List<IFormFile> files);

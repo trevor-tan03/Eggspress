@@ -1,5 +1,6 @@
 using backend.Repositories;
 using backend.util;
+using Microsoft.EntityFrameworkCore;
 using System.IO;
 
 namespace backend.Services;
@@ -39,7 +40,8 @@ public class UploadService : IUploadService
 
     public async Task<bool> TryEnforceBoxSizeLimitAsync(string boxCode, string fileId, long chunkSize)
     {
-        return await _fileRepository.TryAddChunkSize(boxCode, fileId, chunkSize, MAX_BOX_SIZE);
+        var boxSize = await _boxRepository.GetBoxSize(boxCode);
+        return await _fileRepository.TryAddChunkSize(boxCode, fileId, chunkSize, boxSize, MAX_BOX_SIZE);
     }
 
     public async Task SaveChunkAsync(IFormFile chunk, string path)

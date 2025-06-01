@@ -11,6 +11,10 @@ namespace backend.Models
         public string? OriginalFileName { get; set; }
         // Store file with RandomFileName
         public string? RandomFileName { get; set; }
+        [Required]
+        public int TotalChunks { get; set; }
+        [Required]
+        public int ChunkCount { get; set; }
 
         public string BoxCode { get; set; } = default!;
         public long SizeBytes { get; set; }

@@ -34,6 +34,16 @@ public class LocalBoxRepository : IBoxRepository
         return box;
     }
 
+    public async Task<long> GetBoxSize(string code)
+    {
+        var boxSize = await _context.Files
+            .AsNoTracking()
+            .Where(f => f.BoxCode == code)
+            .SumAsync(f => f.SizeBytes);
+
+        return boxSize;
+    }
+
     public async Task<(BoxOperationResult, Box? createdBox)> CreateBox(string? password = null)
     {
         try

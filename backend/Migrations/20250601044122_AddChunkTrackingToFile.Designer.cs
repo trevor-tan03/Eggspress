@@ -11,8 +11,8 @@ using backend.Data;
 namespace backend.Migrations
 {
     [DbContext(typeof(BoxDbContext))]
-    [Migration("20250530105322_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250601044122_AddChunkTrackingToFile")]
+    partial class AddChunkTrackingToFile
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -48,11 +48,20 @@ namespace backend.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("ChunkCount")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("OriginalFileName")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RandomFileName")
                         .HasColumnType("TEXT");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalChunks")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

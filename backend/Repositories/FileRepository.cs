@@ -12,14 +12,15 @@ public class FileRepository : IFileRepository
     {
         _context = context;
     }
-    public async Task AddFile(string boxCode, string id, string originalFileName, string randomFileName)
+    public async Task AddFile(string boxCode, string id, string originalFileName, string randomFileName, int totalChunks)
     {
         var file = new Models.File
         {
             Id = id,
             OriginalFileName = originalFileName,
             RandomFileName = randomFileName,
-            BoxCode = boxCode
+            BoxCode = boxCode,
+            TotalChunks = totalChunks,
         };
         await _context.Files.AddAsync(file);
         await _context.SaveChangesAsync();
@@ -56,22 +57,15 @@ public class FileRepository : IFileRepository
         return file.RandomFileName;
     }
 
-    public async Task<Boolean> TryAddChunkSize(string boxCode, string fileId, long chunkSize, long maxBoxSize)
+    public async Task<Boolean> TryAddChunkSize(string boxCode, string fileId, long chunkSize, long totalSize, long maxBoxSize)
     {
-        var boxFiles = _context.Files.Where(f => f.BoxCode == boxCode);
-        var totalSize = await boxFiles.SumAsync(f => f.SizeBytes);
-
         if (totalSize + chunkSize > maxBoxSize)
             return false;
 
-        var file = await _context.Files.FirstOrDefaultAsync(f => f.Id == fileId);
-        if (file != null)
-        {
-            file.SizeBytes += chunkSize;
-            await _context.SaveChangesAsync();
-            return true;
-        }
+        await _context.Database.ExecuteSqlRawAsync(
+            "UPDATE Files SET SizeBytes = SizeBytes + @p0, ChunkCount = ChunkCount + 1 WHERE Id = @p1 AND BoxCode = @p2",
+            chunkSize, fileId, boxCode);
 
-        return false;
+        return true;
     }
 }

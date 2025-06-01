@@ -124,7 +124,7 @@ public class BoxController : ControllerBase
             {
                 var extension = Path.GetExtension(model.FileName);
                 var randomName = Guid.NewGuid().ToString("N") + extension;
-                await _fileRepository.AddFile(code, model.FileId, model.FileName, randomName);
+                await _fileRepository.AddFile(code, model.FileId, model.FileName, randomName, model.TotalChunks);
             }
 
             var allowed = await _uploadService.TryEnforceBoxSizeLimitAsync(code, model.FileId, model.Chunk.Length);

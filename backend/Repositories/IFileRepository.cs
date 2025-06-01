@@ -2,9 +2,9 @@ namespace backend.Repositories;
 
 public interface IFileRepository
 {
-    public Task AddFile(string boxCode, string id, string originalFileName, string randomFileName);
+    public Task AddFile(string boxCode, string id, string originalFileName, string randomFileName, int totalChunks);
     public Task<Models.File?> GetFileById(string boxCode, string fileId);
     public Task<string?> GetOriginalFileName(string boxCode, string randomFileName);
     public Task<string?> GetRandomFileName(string boxCode, string originalFileName);
-    public Task<Boolean> TryAddChunkSize(string boxCode, string fileId, long chunkSize, long maxBoxSize);
+    public Task<Boolean> TryAddChunkSize(string boxCode, string fileId, long chunkSize, long curBoxSize, long maxBoxSize);
 }

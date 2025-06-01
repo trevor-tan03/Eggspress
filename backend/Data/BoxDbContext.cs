@@ -18,6 +18,7 @@ public class BoxDbContext : DbContext
             .HasOne(f => f.Box)
             .WithMany(b => b.Files)
             .HasForeignKey(f => f.BoxCode)
-            .HasPrincipalKey(b => b.Code);
+            .HasPrincipalKey(b => b.Code)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

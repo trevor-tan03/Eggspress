@@ -45,6 +45,9 @@ namespace backend.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("ChunkCount")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("OriginalFileName")
                         .HasColumnType("TEXT");
 
@@ -52,6 +55,9 @@ namespace backend.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<long>("SizeBytes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalChunks")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");

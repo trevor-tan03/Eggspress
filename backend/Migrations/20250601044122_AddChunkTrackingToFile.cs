@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace backend.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class AddChunkTrackingToFile : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -32,7 +32,10 @@ namespace backend.Migrations
                     Id = table.Column<string>(type: "TEXT", nullable: false),
                     OriginalFileName = table.Column<string>(type: "TEXT", nullable: true),
                     RandomFileName = table.Column<string>(type: "TEXT", nullable: true),
-                    BoxCode = table.Column<string>(type: "TEXT", nullable: false)
+                    TotalChunks = table.Column<int>(type: "INTEGER", nullable: false),
+                    ChunkCount = table.Column<int>(type: "INTEGER", nullable: false),
+                    BoxCode = table.Column<string>(type: "TEXT", nullable: false),
+                    SizeBytes = table.Column<long>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
